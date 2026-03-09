@@ -1,7 +1,8 @@
 
 export interface BlogSection {
-  type: 'heading' | 'subheading' | 'paragraph' | 'markdown' | 'image' | 'code' | 'note' | 'text';
+  type: 'heading' | 'subheading' | 'paragraph' | 'markdown' | 'image' | 'image-grid' | 'code' | 'note' | 'text' | 'link';
   content: string;
+  content2?: string;
   caption?: string;
   language?: string;
 }

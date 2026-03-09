@@ -31,6 +31,7 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     subheading: '{\n  "type": "subheading",\n  "content": "Small section title..."\n}',
     paragraph: '{\n  "type": "paragraph",\n  "content": "Once upon a time in the 22nd century..."\n}',
     image: '{\n  "type": "image",\n  "content": "url_here",\n  "caption": "Add a caption"\n}',
+    imageGrid: '{\n  "type": "image-grid",\n  "content": "url1_here",\n  "content2": "url2_here",\n  "caption": "Add a caption for both"\n}',
     code: '{\n  "type": "code",\n  "content": "console.log(\'Action Bastion!\');",\n  "language": "javascript"\n}',
     note: '{\n  "type": "note",\n  "content": "This is a secret gadget tip!"\n}',
     link: '{\n  "type": "link",\n  "content": "https://example.com",\n  "caption": "Check out this resource"\n}'
@@ -89,7 +90,6 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     const textarea = textareaRef.current;
     let current = newBlog.sectionsJSON;
 
-    // Determine cursor position: either current focus or saved last position
     let start: number | null = null;
     let end: number | null = null;
 
@@ -102,7 +102,25 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     }
 
     const trimmed = current.trim();
-    let insertText = template;
+
+    const executeInsert = (startIdx: number, endIdx: number, textToInsert: string, fallbackUpdatedText: string, finalCursorPos: number) => {
+      if (textarea) {
+        textarea.focus();
+        textarea.setSelectionRange(startIdx, endIdx);
+        const success = document.execCommand('insertText', false, textToInsert);
+        if (!success) {
+          setNewBlog(prev => ({ ...prev, sectionsJSON: fallbackUpdatedText }));
+        }
+        setTimeout(() => {
+          textarea.focus();
+          textarea.setSelectionRange(finalCursorPos, finalCursorPos);
+          lastCursorPositionRef.current = { start: finalCursorPos, end: finalCursorPos };
+        }, 0);
+      } else {
+        setNewBlog(prev => ({ ...prev, sectionsJSON: fallbackUpdatedText }));
+      }
+      setErrors(prev => ({ ...prev, sectionsJSON: false }));
+    };
 
     // If we are appending to a non-empty list that ends with ], add inside the array
     if ((start === null || start === current.length) && trimmed.length > 2 && trimmed.endsWith(']')) {
@@ -110,69 +128,49 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       const lastBracketIndex = current.lastIndexOf(']');
       const beforeBracket = current.substring(0, lastBracketIndex).trimEnd();
 
-      // Check if there's content before the bracket (not just [)
+      let textToInsert = '';
       if (beforeBracket.endsWith('}')) {
-        // There's existing content, add comma before new template
-        current = beforeBracket + ',\n' + template + '\n]';
+        textToInsert = ',\n' + template;
       } else if (beforeBracket.endsWith('[')) {
-        // Empty array, just add the template
-        current = beforeBracket + '\n' + template + '\n]';
+        textToInsert = '\n' + template;
       } else {
-        // Some other case, just add
-        current = beforeBracket + '\n' + template + '\n]';
+        textToInsert = '\n' + template;
       }
-      setNewBlog({ ...newBlog, sectionsJSON: current });
 
-      // Move cursor to end of inserted text
-      if (textarea) {
-        setTimeout(() => {
-          const newPos = current.length - 2; // Before the ]
-          textarea.focus();
-          textarea.setSelectionRange(newPos, newPos);
-          lastCursorPositionRef.current = { start: newPos, end: newPos };
-        }, 0);
-      }
-      setErrors({ ...errors, sectionsJSON: false });
+      const fallbackUpdated = beforeBracket + textToInsert + '\n]';
+      const finalCursorPos = beforeBracket.length + textToInsert.length;
+
+      executeInsert(beforeBracket.length, current.length, textToInsert + '\n]', fallbackUpdated, finalCursorPos);
       return;
     }
 
     if (start !== null && end !== null) {
+      let insertText = template;
       const before = current.substring(0, start);
       const after = current.substring(end);
       const beforeTrimmed = before.trimEnd();
       const afterTrimmed = after.trimStart();
 
-      // Determine if we need a comma before
       if (beforeTrimmed.endsWith('}')) {
         insertText = ',\n' + insertText;
       }
-
-      // Determine if we need a comma after (if next non-whitespace is {)
       if (afterTrimmed.startsWith('{')) {
         insertText = insertText + ',';
       }
 
-      const updated = before + insertText + after;
-      setNewBlog({ ...newBlog, sectionsJSON: updated });
+      const fallbackUpdated = before + insertText + after;
+      const finalCursorPos = start + insertText.length;
 
-      // Restore cursor position after the inserted text
-      if (textarea) {
-        setTimeout(() => {
-          const newPos = start! + insertText.length;
-          textarea.focus();
-          textarea.setSelectionRange(newPos, newPos);
-          lastCursorPositionRef.current = { start: newPos, end: newPos };
-        }, 0);
-      }
+      executeInsert(start, end, insertText, fallbackUpdated, finalCursorPos);
     } else {
-      // Fallback: overwrite or append
       if (!trimmed) {
-        setNewBlog({ ...newBlog, sectionsJSON: '[\n' + template + '\n]' });
+        const insertText = '[\n' + template + '\n]';
+        executeInsert(0, current.length, insertText, insertText, insertText.length - 2);
       } else {
-        setNewBlog({ ...newBlog, sectionsJSON: current + '\n' + template });
+        const insertText = '\n' + template;
+        executeInsert(current.length, current.length, insertText, current + insertText, current.length + insertText.length);
       }
     }
-    setErrors({ ...errors, sectionsJSON: false });
   };
 
   const clearEditor = () => {
@@ -510,6 +508,12 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     "caption": "Image caption"
   },
   {
+    "type": "image-grid",
+    "content": "URL1",
+    "content2": "URL2",
+    "caption": "Caption for the grid"
+  },
+  {
     "type": "code",
     "content": "console.log('Hello!');",
     "language": "javascript"
@@ -577,6 +581,16 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                 <code className="text-green-400 block bg-black/50 p-1 rounded whitespace-pre">{`{
   "type": "image",
   "content": "URL",
+  "caption": "Alt text"
+}`}</code>
+              </div>
+
+              <div className="bg-black/40 p-2 rounded border border-white/20">
+                <p className="text-yellow-400 font-black uppercase mb-1">Image Grid</p>
+                <code className="text-green-400 block bg-black/50 p-1 rounded whitespace-pre">{`{
+  "type": "image-grid",
+  "content": "URL1",
+  "content2": "URL2",
   "caption": "Alt text"
 }`}</code>
               </div>
@@ -754,35 +768,59 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                         <button onClick={() => smartInsert(TEMPLATES.paragraph, true)} className="bg-white text-black px-2 py-1 text-[9px] font-black border-2 border-black">+P</button>
 
                         {/* Image Uploader for Sections */}
-                        <label className="bg-[#00A1FF] text-white px-2 py-1 text-[9px] font-black border-2 border-black cursor-pointer hover:bg-blue-400">
-                          +IMG
+                        <button onClick={() => smartInsert(TEMPLATES.image, true)} className="bg-[#e346d3] text-white px-2 py-1 text-[9px] font-black border-2 border-black">+URL</button>
+                        <label className="bg-[#ff8c42] text-white px-2 py-1 text-[9px] font-black border-2 border-black cursor-pointer hover:bg-orange-400">
+                          +GRID
                           <input
                             type="file"
+                            multiple
                             accept="image/*"
                             className="hidden"
                             onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (!file) return;
-                              if (file.size > 800 * 1024) {
-                                showFeedback("FILE TOO BIG! Max 800KB! 🛑", "error");
+                              const files = Array.from(e.target.files || []) as File[];
+                              if (files.length === 0) return;
+                              if (files.length > 2) {
+                                showFeedback("MAX 2 IMAGES FOR GRID! 🛑", "error");
                                 return;
                               }
-                              const reader = new FileReader();
-                              reader.onloadend = () => {
-                                if (typeof reader.result === 'string') {
-                                  const imgId = `IMG_${Date.now()}`;
-                                  setImageMap(prev => ({ ...prev, [imgId]: reader.result as string }));
-                                  smartInsert(`{\n  "type": "image",\n  "content": "{{${imgId}}}",\n  "caption": "Uploaded Image"\n}`, true);
+                              if (files.some((f) => f.size > 800 * 1024)) {
+                                showFeedback("FILE TOO BIG! Max 800KB each! 🛑", "error");
+                                return;
+                              }
+
+                              const promises = files.map(file => {
+                                return new Promise<string>((resolve) => {
+                                  const reader = new FileReader();
+                                  reader.onloadend = () => {
+                                    if (typeof reader.result === 'string') {
+                                      resolve(reader.result);
+                                    } else {
+                                      resolve('');
+                                    }
+                                  };
+                                  reader.readAsDataURL(file);
+                                });
+                              });
+
+                              Promise.all(promises).then(results => {
+                                const imgId1 = `IMG_${Date.now()}_1`;
+                                const imgId2 = results.length > 1 ? `IMG_${Date.now()}_2` : '';
+
+                                const newMap: { [key: string]: string } = { [imgId1]: results[0] };
+                                if (imgId2) newMap[imgId2] = results[1];
+
+                                setImageMap(prev => ({ ...prev, ...newMap }));
+
+                                if (results.length === 1) {
+                                  smartInsert(`{\n  "type": "image",\n  "content": "{{${imgId1}}}",\n  "caption": "Uploaded Image"\n}`, true);
+                                } else {
+                                  smartInsert(`{\n  "type": "image-grid",\n  "content": "{{${imgId1}}}",\n  "content2": "{{${imgId2}}}",\n  "caption": "Uploaded Grid"\n}`, true);
                                 }
-                              };
-                              reader.readAsDataURL(file);
-                              // Reset value so same file can be selected again
+                              });
                               e.target.value = '';
                             }}
                           />
                         </label>
-
-                        <button onClick={() => smartInsert(TEMPLATES.image, true)} className="bg-[#e346d3] text-white px-2 py-1 text-[9px] font-black border-2 border-black">+URL</button>
                         <button onClick={() => smartInsert(TEMPLATES.code, true)} className="bg-[#FFD600] text-black px-2 py-1 text-[9px] font-black border-2 border-black">+CODE</button>
                         <button onClick={() => smartInsert(TEMPLATES.note, true)} className="bg-[#6B4BFF] text-white px-2 py-1 text-[9px] font-black border-2 border-black">+NOTE</button>
                         <button onClick={() => smartInsert(TEMPLATES.link, true)} className="bg-[#10B981] text-white px-2 py-1 text-[9px] font-black border-2 border-black">+LINK</button>

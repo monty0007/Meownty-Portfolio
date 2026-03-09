@@ -31,6 +31,27 @@ const SectionRenderer: React.FC<{ section: BlogSection }> = ({ section }) => {
         </div>
       );
 
+    case 'image-grid':
+      return (
+        <div className="my-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="border-4 border-black shadow-[6px_6px_0px_#FFD600] overflow-hidden bg-white flex justify-center h-full">
+              <img src={section.content} alt={section.caption || 'Image 1'} className="w-full h-auto max-h-[500px] object-contain" />
+            </div>
+            {section.content2 && (
+              <div className="border-4 border-black shadow-[6px_6px_0px_#FFD600] overflow-hidden bg-white flex justify-center h-full">
+                <img src={section.content2} alt={section.caption || 'Image 2'} className="w-full h-auto max-h-[500px] object-contain" />
+              </div>
+            )}
+          </div>
+          {section.caption && (
+            <div className="mt-4 bg-black text-white px-3 py-1.5 inline-block font-bold uppercase text-xs">
+              FIG: {section.caption}
+            </div>
+          )}
+        </div>
+      );
+
     case 'code':
       return (
         <div className="my-8 bg-[#1A1A1A] border-3 border-black rounded-lg overflow-hidden shadow-[6px_6px_0px_#000] relative">
