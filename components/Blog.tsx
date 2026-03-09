@@ -20,8 +20,8 @@ const SectionRenderer: React.FC<{ section: BlogSection }> = ({ section }) => {
     case 'image':
       return (
         <div className="my-8">
-          <div className="border-4 border-black shadow-[8px_8px_0px_#00A1FF] overflow-hidden bg-white">
-            <img src={section.content} alt={section.caption} className="w-full h-auto object-cover" />
+          <div className="border-4 border-black shadow-[8px_8px_0px_#00A1FF] overflow-hidden bg-white flex justify-center">
+            <img src={section.content} alt={section.caption} className="w-full h-auto max-h-[500px] object-contain" />
           </div>
           {section.caption && (
             <div className="mt-3 bg-black text-white px-3 py-1.5 inline-block font-bold uppercase text-xs">
