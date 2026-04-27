@@ -283,7 +283,7 @@ const ProjectsPage: React.FC = () => {
   }, []);
 
   return (
-    <section className="min-h-screen bg-[#FFF9E6] pt-28 pb-24 px-6">
+    <section className="min-h-screen bg-[#FFF9E6] pb-24">
       {/* Grid pattern */}
       <div
         className="fixed inset-0 pointer-events-none opacity-[0.025] z-0"
@@ -293,33 +293,40 @@ const ProjectsPage: React.FC = () => {
         }}
       />
 
-      <div className="relative z-10 max-w-6xl mx-auto">
+      {/* Admin-style dark header */}
+      <div className="bg-black border-b-4 border-[#FFD600] pt-36 pb-12 px-6 relative overflow-hidden">
+        <div className="absolute -right-10 -top-8 text-[20vw] font-black text-white/[0.03] select-none pointer-events-none uppercase leading-none italic">WORKS</div>
+        <div className="max-w-6xl mx-auto flex flex-col md:flex-row md:items-end justify-between gap-6 relative z-10">
+          <div>
+            <p className="text-[#FFD600]/70 font-black text-[10px] uppercase tracking-[0.3em] mb-2">Portfolio</p>
+            <h1 className="text-5xl sm:text-7xl md:text-8xl font-black uppercase tracking-tighter leading-none text-white">
+              My{' '}
+              <span
+                className="relative inline-block"
+                style={{
+                  WebkitTextStroke: '3px #FFD600',
+                  color: 'transparent',
+                  textShadow: '8px 8px 0px #FF4B4B',
+                }}
+              >
+                Works
+              </span>
+            </h1>
+            {!loading && (
+              <div className="flex items-center gap-3 mt-3">
+                <div className="h-[4px] w-16 bg-[#FFD600] border border-black" />
+                <p className="font-bold text-white/50 text-sm">
+                  {projects.length} project{projects.length !== 1 ? 's' : ''} built
+                </p>
+              </div>
+            )}
+          </div>
 
-        {/* Header */}
-        <div className="mb-16">
-          <div className="inline-block bg-black text-[#FFD600] px-4 py-1 font-black uppercase text-xs tracking-widest mb-4 border-2 border-black shadow-[4px_4px_0px_#FFD600]">
-            Portfolio
-          </div>
-          <h1 className="text-[4rem] sm:text-[6rem] md:text-[8rem] font-black uppercase tracking-tighter leading-none text-black">
-            My{' '}
-            <span
-              className="relative inline-block"
-              style={{
-                WebkitTextStroke: '3px black',
-                color: 'transparent',
-                textShadow: '8px 8px 0px #FF4B4B',
-              }}
-            >
-              Works
-            </span>
-          </h1>
-          <div className="flex items-center gap-4 mt-4">
-            <div className="h-[6px] w-24 bg-[#FFD600] border-2 border-black" />
-            <p className="font-bold text-gray-600 text-lg">
-              {loading ? 'Loading...' : `${projects.length} project${projects.length !== 1 ? 's' : ''} built`}
-            </p>
-          </div>
+
         </div>
+      </div>
+
+      <div className="relative z-10 max-w-6xl mx-auto px-6 pt-12">
 
         {/* Loading skeleton */}
         {loading && (

@@ -69,13 +69,16 @@ const ContactForm: React.FC = () => {
 
   if (formState === 'success') {
     return (
-      <div className="bg-white border-[6px] md:border-[8px] border-black p-8 md:p-12 shadow-[15px_15px_0px_#000] md:shadow-[20px_20px_0px_#000] rotate-1 animate-in zoom-in duration-300 text-black mx-auto max-w-xl">
-        <div className="text-6xl md:text-8xl mb-6">🚀</div>
-        <h3 className="text-3xl md:text-4xl font-black uppercase mb-4 italic">Action Bastion!</h3>
-        <p className="text-lg md:text-xl font-bold text-gray-700">Message beamed to Manish's Lab. Expect a ping soon!</p>
+      <div className="bg-white border-[8px] border-black p-10 md:p-14 shadow-[16px_16px_0px_#000] rotate-1 animate-in zoom-in duration-300 text-black mx-auto max-w-xl">
+        <div className="text-7xl md:text-8xl mb-5">🚀</div>
+        <div className="inline-block bg-[#00A1FF] text-white px-4 py-1 font-black uppercase text-xs border-2 border-black mb-4 shadow-[3px_3px_0px_#000]">
+          Mission Complete
+        </div>
+        <h3 className="text-3xl md:text-4xl font-black uppercase mb-4 italic leading-tight">Action Bastion!</h3>
+        <p className="text-lg md:text-xl font-bold text-gray-600 leading-relaxed">Message beamed to Manish's Lab. Expect a ping soon!</p>
         <button
           onClick={() => setFormState('idle')}
-          className="mt-10 cartoon-btn bg-black text-white px-8 py-3 font-black uppercase w-full sm:w-auto"
+          className="mt-10 cartoon-btn bg-black text-white px-8 py-3 font-black uppercase w-full sm:w-auto shadow-[4px_4px_0px_rgba(0,0,0,0.3)] hover:bg-[#FFD600] hover:text-black transition-colors border-4 border-black"
         >
           Send Another Signal
         </button>
@@ -83,77 +86,106 @@ const ContactForm: React.FC = () => {
     );
   }
 
+  const inputClass = "w-full p-3 md:p-4 border-[3px] md:border-4 border-black font-bold focus:bg-yellow-50 focus:outline-none focus:border-[#FFD600] focus:shadow-[0_0_0_3px_#FFD600] transition-all text-black placeholder-gray-400 text-sm md:text-base";
+
   return (
-    <form onSubmit={handleSubmit} className="w-full max-w-2xl mx-auto bg-white border-[6px] md:border-[8px] border-black p-6 md:p-12 shadow-[15px_15px_0px_#000] md:shadow-[25px_25px_0px_#000] relative text-left text-black">
-      <div className="absolute -top-4 -left-4 md:-top-6 md:-left-6 bg-[#FFD600] border-2 md:border-4 border-black px-3 md:px-4 py-1 font-black uppercase text-[10px] md:text-sm -rotate-2">
-        Secret Mission Protocol
+    <form onSubmit={handleSubmit} className="w-full max-w-2xl mx-auto bg-white border-[8px] border-black p-6 md:p-12 shadow-[16px_16px_0px_#000] relative text-left text-black">
+      <div className="absolute -top-5 -left-5 bg-[#FFD600] border-4 border-black px-4 py-1.5 font-black uppercase text-xs -rotate-2 shadow-[4px_4px_0px_#000]">
+        🔒 Secret Mission Protocol
       </div>
 
-      <div className="space-y-4 md:space-y-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
+      <div className="space-y-5 md:space-y-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-5">
           <div>
-            <label className="block font-black uppercase text-[10px] md:text-xs mb-1 md:mb-2 text-black">Ninja Name</label>
+            <label className="flex items-center gap-1.5 font-black uppercase text-[10px] md:text-xs mb-1.5 text-black">
+              <span className="text-[#FF4B4B]">★</span> Ninja Name
+            </label>
             <input
               required
               type="text"
               placeholder="Who are you?"
               value={formData.firstname}
               onChange={e => setFormData({ ...formData, firstname: e.target.value })}
-              className="w-full p-3 md:p-4 border-[3px] md:border-4 border-black font-bold focus:bg-yellow-50 focus:outline-none focus:ring-4 focus:ring-yellow-400 transition-all text-black placeholder-gray-400 text-sm md:text-base"
+              className={inputClass}
             />
           </div>
           <div>
-            <label className="block font-black uppercase text-[10px] md:text-xs mb-1 md:mb-2 text-black">Signal (Email)</label>
+            <label className="flex items-center gap-1.5 font-black uppercase text-[10px] md:text-xs mb-1.5 text-black">
+              <span className="text-[#FF4B4B]">★</span> Signal (Email)
+            </label>
             <input
               required
               type="email"
               placeholder="How do I reach you?"
               value={formData.email}
               onChange={e => setFormData({ ...formData, email: e.target.value })}
-              className="w-full p-3 md:p-4 border-[3px] md:border-4 border-black font-bold focus:bg-yellow-50 focus:outline-none focus:ring-4 focus:ring-yellow-400 transition-all text-black placeholder-gray-400 text-sm md:text-base"
+              className={inputClass}
             />
           </div>
         </div>
 
         <div>
-          <label htmlFor="service-select" className="block font-black uppercase text-[10px] md:text-xs mb-1 md:mb-2 text-black">Gadget of Interest</label>
+          <label htmlFor="service-select" className="flex items-center gap-1.5 font-black uppercase text-[10px] md:text-xs mb-1.5 text-black">
+            <span className="w-4 h-4 bg-black text-white text-[8px] font-black flex items-center justify-center border border-black">▼</span>
+            Gadget of Interest
+          </label>
           <div className="relative">
             <select
               id="service-select"
               value={formData.service}
               onChange={e => setFormData({ ...formData, service: e.target.value })}
-              className="w-full p-3 md:p-4 border-[3px] md:border-4 border-black font-bold focus:bg-yellow-50 focus:outline-none focus:ring-4 focus:ring-yellow-400 bg-white text-black text-sm md:text-base appearance-none"
+              className={`${inputClass} appearance-none pr-12 cursor-pointer`}
             >
               <option>RAG Gadget</option>
               <option>Agentic Workflow</option>
               <option>Power Platform</option>
               <option>Custom AI Magic</option>
             </select>
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-black">
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 bg-black text-white font-black text-xs h-full w-12 justify-center">
               ▼
             </div>
           </div>
         </div>
 
         <div>
-          <label className="block font-black uppercase text-[10px] md:text-xs mb-1 md:mb-2 text-black">Mission Brief (Message)</label>
+          <label className="flex items-center gap-1.5 font-black uppercase text-[10px] md:text-xs mb-1.5 text-black">
+            <span className="text-[#FF4B4B]">★</span> Mission Brief
+          </label>
           <textarea
             required
-            rows={4}
-            placeholder="Tell me about your project..."
+            rows={5}
+            placeholder="Tell me about your project, timeline, and goals..."
             value={formData.message}
             onChange={e => setFormData({ ...formData, message: e.target.value })}
-            className="w-full p-3 md:p-4 border-[3px] md:border-4 border-black font-bold focus:bg-yellow-50 focus:outline-none focus:ring-4 focus:ring-yellow-400 transition-all text-black placeholder-gray-400 text-sm md:text-base"
+            className={inputClass}
           />
+          <div className="flex justify-end mt-1">
+            <span className={`text-[10px] font-black uppercase tracking-wide ${formData.message.length > 20 ? 'text-green-600' : 'text-gray-400'}`}>
+              {formData.message.length} chars
+            </span>
+          </div>
         </div>
 
         <button
           disabled={formState === 'sending'}
           type="submit"
-          className="cartoon-btn w-full bg-[#00A1FF] text-white py-4 md:py-6 font-black text-xl md:text-3xl uppercase tracking-tighter shadow-[6px_6px_0px_#000] md:shadow-[10px_10px_0px_#000] hover:bg-[#FF4B4B] disabled:opacity-50"
+          className={`cartoon-btn w-full text-white py-4 md:py-5 font-black text-xl md:text-2xl uppercase tracking-tighter border-4 border-black transition-all
+            ${formState === 'sending'
+              ? 'bg-gray-400 cursor-not-allowed shadow-none'
+              : 'bg-[#00A1FF] shadow-[8px_8px_0px_#000] hover:bg-[#FF4B4B] hover:shadow-[4px_4px_0px_#000] active:translate-x-1 active:translate-y-1 active:shadow-none'
+            }`}
         >
-          {formState === 'sending' ? 'BEAMING...' : 'SEND SIGNAL →'}
+          {formState === 'sending' ? (
+            <span className="flex items-center justify-center gap-3">
+              <span className="w-5 h-5 border-4 border-white border-t-transparent rounded-full animate-spin"></span>
+              Beaming...
+            </span>
+          ) : 'Send Signal →'}
         </button>
+
+        <p className="text-center text-[10px] font-black uppercase tracking-widest text-gray-400">
+          ★ Required fields — No spam, ever.
+        </p>
       </div>
     </form>
   );

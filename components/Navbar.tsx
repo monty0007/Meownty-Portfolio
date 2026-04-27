@@ -56,7 +56,7 @@ const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentView }) => {
 
   return (
     <nav className={`fixed top-4 sm:top-6 left-1/2 z-[110] w-[95%] sm:w-[90%] max-w-5xl transition-all duration-500 ease-in-out ${isVisible ? 'nav-visible' : 'nav-hidden'}`}>
-      <div className="bg-white border-[3px] sm:border-[4px] border-black shadow-[4px_4px_0px_#000] sm:shadow-[8px_8px_0px_#000] px-3 sm:px-8 py-3 sm:py-4 flex items-center justify-between">
+      <div className="bg-white/10 backdrop-blur-md border-[3px] sm:border-[4px] border-white/30 shadow-[4px_4px_0px_rgba(0,0,0,0.3)] sm:shadow-[8px_8px_0px_rgba(0,0,0,0.3)] px-3 sm:px-8 py-3 sm:py-4 flex items-center justify-between">
         <div
           className="text-2xl font-black tracking-tighter flex items-center gap-2 sm:gap-3 cursor-pointer group"
           onClick={() => {
@@ -67,7 +67,7 @@ const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentView }) => {
           <div className="w-8 h-8 sm:w-10 sm:h-10 bg-[#FFD600] border-2 sm:border-4 border-black rounded-full flex items-center justify-center font-black group-hover:rotate-12 transition-transform text-xs sm:text-base">
             MY
           </div>
-          <span className="hidden sm:inline uppercase">Manish Yadav</span>
+          <span className="hidden sm:inline uppercase text-white">Manish Yadav</span>
         </div>
 
         <div className="flex items-center gap-3 sm:gap-6 font-black uppercase text-[10px] sm:text-sm">
@@ -79,7 +79,7 @@ const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentView }) => {
                 onNavigate('projects');
               }
             }}
-            className={`cursor-pointer hover:text-red-500 transition-colors uppercase font-black ${currentView === 'projects' ? 'text-red-500 underline decoration-4' : 'text-black'}`}
+            className={`cursor-pointer hover:text-red-400 transition-colors uppercase font-black ${currentView === 'projects' ? 'text-red-400 underline decoration-4' : 'text-white'}`}
           >
             Projects
           </a>
@@ -92,7 +92,7 @@ const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentView }) => {
                 onNavigate('blog');
               }
             }}
-            className={`cursor-pointer hover:text-green-500 transition-colors uppercase font-black ${currentView === 'blog' ? 'text-green-500 underline decoration-4' : 'text-black'}`}
+            className={`cursor-pointer hover:text-green-400 transition-colors uppercase font-black ${currentView === 'blog' ? 'text-green-400 underline decoration-4' : 'text-white'}`}
           >
             Blog
           </a>

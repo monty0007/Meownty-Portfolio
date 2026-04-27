@@ -57,34 +57,36 @@ const Arcade: React.FC = () => {
           </h2>
         </header>
 
-        {/* Game Selector - Compact pill buttons */}
-        <div className="flex gap-2 mb-6 bg-black/10 p-2 rounded-full border-4 border-black">
+        {/* Game Selector */}
+        <div className="flex border-4 border-black overflow-hidden shadow-[6px_6px_0px_#000] mb-6">
           <button
             onClick={() => setActiveGame('ninja')}
-            className={`px-3 sm:px-5 py-2 rounded-full font-black uppercase text-[10px] sm:text-xs transition-all ${activeGame === 'ninja'
-              ? 'bg-[#00A1FF] text-white shadow-[2px_2px_0_#000]'
-              : 'bg-white/80 hover:bg-white text-black'
+            className={`flex-1 px-4 sm:px-6 py-3 font-black uppercase text-xs sm:text-sm transition-all flex items-center justify-center gap-2 ${activeGame === 'ninja'
+              ? 'bg-[#00A1FF] text-white'
+              : 'bg-black/20 hover:bg-black/30 text-black'
               }`}
           >
-            🥷 Ninja
+            🥷 <span className="hidden sm:inline">Ninja</span>
           </button>
+          <div className="w-[3px] bg-black flex-shrink-0" />
           <button
             onClick={() => setActiveGame('racing')}
-            className={`px-3 sm:px-5 py-2 rounded-full font-black uppercase text-[10px] sm:text-xs transition-all ${activeGame === 'racing'
-              ? 'bg-[#FF4B4B] text-white shadow-[2px_2px_0_#000]'
-              : 'bg-white/80 hover:bg-white text-black'
+            className={`flex-1 px-4 sm:px-6 py-3 font-black uppercase text-xs sm:text-sm transition-all flex items-center justify-center gap-2 ${activeGame === 'racing'
+              ? 'bg-[#FF4B4B] text-white'
+              : 'bg-black/20 hover:bg-black/30 text-black'
               }`}
           >
-            🏎️ Racing
+            🏎️ <span className="hidden sm:inline">Racing</span>
           </button>
+          <div className="w-[3px] bg-black flex-shrink-0" />
           <button
             onClick={() => setActiveGame('flappy')}
-            className={`px-3 sm:px-5 py-2 rounded-full font-black uppercase text-[10px] sm:text-xs transition-all ${activeGame === 'flappy'
-              ? 'bg-[#73BF2E] text-white shadow-[2px_2px_0_#000]'
-              : 'bg-white/80 hover:bg-white text-black'
+            className={`flex-1 px-4 sm:px-6 py-3 font-black uppercase text-xs sm:text-sm transition-all flex items-center justify-center gap-2 ${activeGame === 'flappy'
+              ? 'bg-[#73BF2E] text-white'
+              : 'bg-black/20 hover:bg-black/30 text-black'
               }`}
           >
-            🐦 Flappy
+            🐦 <span className="hidden sm:inline">Flappy</span>
           </button>
         </div>
 
@@ -121,23 +123,39 @@ const Arcade: React.FC = () => {
 
         {/* Leaderboard */}
         <div className="w-full max-w-2xl">
-          <div className="bg-black text-[#FFD600] px-6 py-2 font-black uppercase text-lg inline-block rotate-1 shadow-[6px_6px_0px_#000] mb-4">
-            🏆 TOP 5 PLAYERS
+          <div className="flex items-center gap-4 mb-4">
+            <div className="bg-black text-[#FFD600] px-6 py-2.5 font-black uppercase text-sm inline-block rotate-1 shadow-[6px_6px_0px_rgba(0,0,0,0.2)] border-2 border-black">
+              🏆 TOP 5 PLAYERS
+            </div>
+            <div className="h-1 flex-1 bg-black/20 rounded-full"></div>
           </div>
           <div className="bg-white border-[6px] border-black p-6 shadow-[12px_12px_0px_#000] -rotate-1">
             {leaderboard.length === 0 ? (
-              <div className="text-center py-4 text-gray-400 font-black uppercase">No scores yet!</div>
+              <div className="text-center py-8">
+                <div className="text-5xl mb-3 opacity-30">🎮</div>
+                <div className="text-gray-400 font-black uppercase text-sm">No scores yet — be the first!</div>
+              </div>
             ) : (
               <div className="space-y-3">
-                {leaderboard.map((entry, i) => (
-                  <div key={i} className={`flex items-center justify-between border-b-2 border-black/10 pb-2 ${entry.name === playerName ? 'bg-yellow-100 -mx-2 px-2 rounded' : ''}`}>
-                    <div className="flex items-center gap-4">
-                      <span className="text-2xl sm:text-3xl font-black text-[#FF4B4B]">#{i + 1}</span>
-                      <span className="text-lg sm:text-xl font-black uppercase">{entry.name}</span>
+                {leaderboard.map((entry, i) => {
+                  const medals = ['🥇', '🥈', '🥉'];
+                  const isCurrentPlayer = entry.name === playerName;
+                  const bgColor = i === 0 ? 'bg-[#FFD600]/20 border-l-4 border-[#FFD600]' : i === 1 ? 'bg-gray-100 border-l-4 border-gray-400' : i === 2 ? 'bg-orange-50 border-l-4 border-orange-400' : '';
+                  return (
+                    <div key={i} className={`flex items-center justify-between py-2 px-3 ${bgColor} ${isCurrentPlayer ? 'ring-2 ring-[#00A1FF] ring-offset-1' : ''} transition-all`}>
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl sm:text-3xl w-9 text-center">{medals[i] || <span className="text-xl font-black text-gray-400">#{i + 1}</span>}</span>
+                        <div>
+                          <span className="text-base sm:text-lg font-black uppercase">{entry.name}</span>
+                          {isCurrentPlayer && (
+                            <span className="ml-2 bg-[#00A1FF] text-white text-[9px] font-black px-1.5 py-0.5 uppercase border border-[#00A1FF]">You</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-xl sm:text-2xl font-black text-[#00A1FF]">{entry.score.toLocaleString()}</div>
                     </div>
-                    <div className="text-xl sm:text-2xl font-black text-[#00A1FF]">{entry.score.toLocaleString()}</div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

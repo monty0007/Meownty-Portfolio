@@ -58,6 +58,14 @@ const Skills: React.FC = () => {
       <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-[1fr_450px] gap-6 lg:gap-12 relative z-10 items-start">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-4 lg:mb-10 gap-6 order-1 lg:col-start-1">
           <div>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="bg-black text-[#FFD600] px-3 py-1 font-black uppercase text-[10px] tracking-widest border-2 border-black shadow-[3px_3px_0px_rgba(0,0,0,0.4)]">
+                Interactive
+              </div>
+              <div className="bg-white text-black px-3 py-1 font-black uppercase text-[10px] tracking-widest border-2 border-black shadow-[3px_3px_0px_rgba(0,0,0,0.4)]">
+                Drag to adjust ↕
+              </div>
+            </div>
             <h2 className="text-5xl md:text-7xl font-black uppercase leading-[0.85] tracking-tighter mb-2">
               Ninja <br /> <span className="text-white" style={{ WebkitTextStroke: '2px black' }}>Stats</span>
             </h2>
@@ -76,7 +84,7 @@ const Skills: React.FC = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 order-3 lg:col-start-1 lg:row-start-2">
           {currentSkills.map(skill => (
-            <div key={skill.name} className="bg-white p-5 border-[4px] border-black shadow-[8px_8px_0px_#000] text-black group relative hover:-translate-y-1 transition-transform overflow-hidden">
+            <div key={skill.name} className="bg-white p-5 border-[4px] border-black shadow-[8px_8px_0px_#000] hover:shadow-[4px_4px_0px_#000] hover:translate-x-1 hover:translate-y-1 text-black group relative transition-all duration-200 overflow-hidden">
               {/* Interaction Overlay Label */}
               <div className="absolute -right-12 top-2 bg-black text-white text-[9px] font-black px-10 py-1 rotate-45 opacity-0 group-hover:opacity-100 transition-opacity">
                 ADJUSTABLE
@@ -124,12 +132,20 @@ const Skills: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Click Cue (hidden by default, shows on hover if level is low) */}
+                {/* Click Cue */}
                 {skill.level < 10 && (
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-40">
                     <span className="text-[10px] font-black uppercase">CLICK TO BOOST</span>
                   </div>
                 )}
+              </div>
+
+              {/* Level descriptor */}
+              <div className="mt-2 flex justify-between items-center">
+                <span className="text-[9px] font-black uppercase text-gray-400 tracking-widest">Proficiency</span>
+                <span className="text-[9px] font-black uppercase tracking-widest" style={{ color: skill.level >= 80 ? '#22c55e' : skill.level >= 50 ? '#FFD600' : '#FF4B4B' }}>
+                  {skill.level >= 80 ? 'Expert' : skill.level >= 50 ? 'Advanced' : 'Learning'}
+                </span>
               </div>
             </div>
           ))}

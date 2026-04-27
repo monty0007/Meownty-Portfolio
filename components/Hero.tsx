@@ -38,12 +38,30 @@ const Hero: React.FC = () => {
   ];
 
   return (
-    <section className="min-h-[85vh] md:min-h-screen pt-16 md:pt-24 pb-6 px-4 md:px-6 flex flex-col items-center justify-center relative overflow-hidden bg-transparent">
+    <section className="min-h-[85vh] md:min-h-screen pt-16 md:pt-24 pb-0 px-4 md:px-6 flex flex-col items-center justify-center relative overflow-hidden bg-black border-b-8 border-[#FFD600]">
+
+      {/* Ghost background text */}
+      <div className="absolute -bottom-6 -left-6 text-[22vw] font-black text-white/[0.07] select-none pointer-events-none uppercase leading-none italic whitespace-nowrap">
+        GENAI
+      </div>
+      <div className="absolute -top-4 -right-4 text-[16vw] font-black text-[#FFD600]/[0.05] select-none pointer-events-none uppercase leading-none italic whitespace-nowrap">
+        AI
+      </div>
+
+      {/* Dot grid overlay */}
+      <div
+        className="absolute inset-0 pointer-events-none opacity-[0.12]"
+        style={{
+          backgroundImage: 'radial-gradient(circle, #ffffff 1px, transparent 1px)',
+          backgroundSize: '36px 36px',
+        }}
+      />
+
       {/* Interactive Tech Logos Layer */}
       {techStack.map((tech, i) => (
         <div
           key={i}
-          className={`absolute ${tech.pos} ${tech.size} floating opacity-40 md:opacity-90 z-0 pointer-events-none transition-transform duration-300 ease-out p-1`}
+          className={`absolute ${tech.pos} ${tech.size} floating opacity-40 md:opacity-70 z-0 pointer-events-none transition-transform duration-300 ease-out p-1`}
           style={{
             animationDelay: tech.delay,
             transform: `translate(${mousePos.x * tech.factor}px, ${mousePos.y * tech.factor}px)`
@@ -52,40 +70,81 @@ const Hero: React.FC = () => {
           <img
             src={tech.url}
             alt={tech.name}
-            className="w-full h-full object-contain filter drop-shadow-[6px_6px_0px_rgba(0,0,0,1)]"
+            className="w-full h-full object-contain drop-shadow-[0_0_12px_rgba(255,214,0,0.3)]"
           />
         </div>
       ))}
 
       <div className="max-w-6xl w-full text-center z-20 relative">
-        <div className="inline-block bg-[#FF4B4B] text-white px-4 md:px-6 py-2 text-sm md:text-base font-black cartoon-btn mb-4 md:mb-6 rotate-[-2deg] shadow-[4px_4px_0px_#000] cursor-default">
-          Hi, I'm Manish Yadav
+        {/* Top label */}
+        <div className="flex items-center justify-center gap-3 mb-5 md:mb-7">
+          <div className="h-px w-12 bg-white/20" />
+          <div className="inline-block bg-[#FF4B4B] text-white px-4 md:px-6 py-2 text-sm md:text-base font-black border-4 border-[#FF4B4B] rotate-[-1deg] shadow-[4px_4px_0px_rgba(255,75,75,0.3)] cursor-default">
+            Hi, I'm Manish Yadav
+          </div>
+          <div className="h-px w-12 bg-white/20" />
         </div>
 
-        <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-[7rem] font-black leading-[0.9] mb-4 md:mb-6 uppercase tracking-tighter break-words">
+        <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-[7rem] font-black leading-[0.9] mb-4 md:mb-6 uppercase tracking-tighter break-words text-white">
           GEN AI <br className="hidden sm:block" />
           <span
-            className="text-[#00A1FF] hover:scale-105 transition-transform inline-block cursor-pointer px-2"
-            style={{ WebkitTextStroke: '2px black', textShadow: '4px 4px 0px #000' }}
+            className="text-[#f0cc00] hover:scale-105 transition-transform inline-block cursor-pointer px-2"
+            style={{ WebkitTextStroke: '2px #000', textShadow: '4px 4px 0px rgba(255,75,75,0.6)' }}
           >
             ENGINEER
           </span>
         </h1>
 
-        <p className="max-w-2xl mx-auto text-base md:text-xl lg:text-2xl font-bold mb-6 md:mb-8 text-gray-800 leading-tight px-4">
+        <p className="max-w-2xl mx-auto text-base md:text-xl lg:text-2xl font-bold mb-6 md:mb-10 text-white/70 leading-tight px-4">
           Crafting production-ready AI systems with <br className="hidden md:block" />
-          <span className="bg-[#FFD600] border-2 border-black px-2 inline-block my-1">Engineering Precision</span>and real-world impact.
+          <span className="bg-[#FFD600] text-black border-2 border-[#FFD600] px-2 inline-block my-1">Engineering Precision</span>
+          {' '}and real-world impact.
         </p>
 
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 md:gap-6 px-6">
-          <a href="#projects" className="cartoon-btn bg-[#FFD600] text-black text-base md:text-xl font-black px-8 md:px-10 py-3 md:py-4 uppercase no-underline w-full sm:w-auto">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 md:gap-5 px-6">
+          <a href="#projects" className="cartoon-btn bg-[#FFD600] text-black text-base md:text-xl font-black px-8 md:px-10 py-3 md:py-4 uppercase no-underline w-full sm:w-auto border-4 border-[#FFD600] shadow-[6px_6px_0px_rgba(255,214,0,0.3)] hover:shadow-[3px_3px_0px_rgba(255,214,0,0.3)] hover:translate-x-0.5 hover:translate-y-0.5 transition-all">
             View My Lab 🔬
           </a>
-          <a href="mailto:monty.my1234@gmail.com" className="cartoon-btn bg-white text-black text-base md:text-xl font-black px-8 md:px-10 py-3 md:py-4 uppercase no-underline w-full sm:w-auto">
+          <a href="mailto:monty.my1234@gmail.com" className="cartoon-btn bg-white/10 text-white text-base md:text-xl font-black px-8 md:px-10 py-3 md:py-4 uppercase no-underline w-full sm:w-auto border-4 border-white/30 hover:bg-white hover:text-black transition-all">
             Collaborate
           </a>
         </div>
+
+        {/* Quick Stats Row */}
+        <div className="mt-10 md:mt-14 flex flex-wrap items-center justify-center gap-3">
+          <div className="flex items-center gap-2 bg-white/5 text-white px-4 py-2.5 border-2 border-white/20 hover:border-[#FFD600] hover:bg-white/10 transition-all">
+            <span className="text-[#FFD600] font-black text-lg leading-none">10+</span>
+            <span className="font-black uppercase text-[10px] tracking-widest">Projects Built</span>
+          </div>
+          <div className="flex items-center gap-2 bg-[#FF4B4B]/20 text-white px-4 py-2.5 border-2 border-[#FF4B4B]/50 hover:border-[#FF4B4B] hover:bg-[#FF4B4B]/30 transition-all">
+            <span className="text-[#FFD600] font-black text-lg leading-none">8+</span>
+            <span className="font-black uppercase text-[10px] tracking-widest">Certifications</span>
+          </div>
+          <div className="flex items-center gap-2 bg-[#00A1FF]/20 text-white px-4 py-2.5 border-2 border-[#00A1FF]/50 hover:border-[#00A1FF] hover:bg-[#00A1FF]/30 transition-all">
+            <span className="font-black text-lg leading-none">3</span>
+            <span className="font-black uppercase text-[10px] tracking-widest">Arcade Games</span>
+          </div>
+          <div className="flex items-center gap-2 bg-white/5 text-white px-4 py-2.5 border-2 border-white/20 hover:border-green-400 transition-all">
+            <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse inline-block"></span>
+            <span className="font-black uppercase text-[10px] tracking-widest">Available Now</span>
+          </div>
+        </div>
       </div>
+
+      {/* Scroll Indicator */}
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1.5 animate-bounce z-20 pointer-events-none">
+        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30">Scroll</span>
+        <div className="w-6 h-10 border-2 border-white/20 rounded-full flex items-start justify-center p-1.5">
+          <div className="w-1.5 h-2.5 bg-[#FFD600] rounded-full" style={{ animation: 'scrollDot 2s ease-in-out infinite' }}></div>
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes scrollDot {
+          0%, 100% { transform: translateY(0); opacity: 1; }
+          50% { transform: translateY(10px); opacity: 0.3; }
+        }
+      `}</style>
     </section>
   );
 };
