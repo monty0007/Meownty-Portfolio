@@ -1,8 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { getTopScores, saveScore as saveScoreToDb } from '../services/scoreService';
-import NinjaGame from './NinjaGame';
-import RacingGame from './RacingGame';
-import FlappyGame from './FlappyGame';
+
+// Each game is heavy and only one can be active at a time, so load them on demand.
+const NinjaGame = lazy(() => import('./NinjaGame'));
+const RacingGame = lazy(() => import('./RacingGame'));
+const FlappyGame = lazy(() => import('./FlappyGame'));
+
+const GameLoader: React.FC = () => (
+  <div className="w-full h-full flex items-center justify-center bg-black text-[#FFD600] font-black uppercase tracking-widest text-sm">
+    <div className="flex items-center gap-3">
+      <span className="w-4 h-4 border-2 border-[#FFD600] border-t-transparent rounded-full animate-spin" />
+      Booting cabinet...
+    </div>
+  </div>
+);
 
 interface LeaderboardEntry {
   name: string;
@@ -93,31 +104,33 @@ const Arcade: React.FC = () => {
         {/* Game Cabinet */}
         <div className="w-full max-w-[900px] aspect-[16/10] bg-[#111] border-[6px] sm:border-[12px] border-black rounded-2xl sm:rounded-[3rem] shadow-[10px_10px_0px_#000] sm:shadow-[30px_30px_0px_#000] relative overflow-hidden flex flex-col p-2 sm:p-3 mb-12">
           <div className="flex-1 rounded-xl sm:rounded-[2rem] overflow-hidden relative border-2 sm:border-4 border-black/40">
-            {activeGame === 'ninja' && (
-              <NinjaGame
-                key="ninja"
-                playerName={playerName}
-                onGameOver={saveScore}
-                onScoreChange={() => { }}
-                onNameChange={(name) => setPlayerName(name)}
-              />
-            )}
-            {activeGame === 'racing' && (
-              <RacingGame
-                key="racing"
-                playerName={playerName}
-                onGameOver={saveScore}
-                onNameChange={(name) => setPlayerName(name)}
-              />
-            )}
-            {activeGame === 'flappy' && (
-              <FlappyGame
-                key="flappy"
-                playerName={playerName}
-                onGameOver={saveScore}
-                onNameChange={(name) => setPlayerName(name)}
-              />
-            )}
+            <Suspense fallback={<GameLoader />}>
+              {activeGame === 'ninja' && (
+                <NinjaGame
+                  key="ninja"
+                  playerName={playerName}
+                  onGameOver={saveScore}
+                  onScoreChange={() => { }}
+                  onNameChange={(name) => setPlayerName(name)}
+                />
+              )}
+              {activeGame === 'racing' && (
+                <RacingGame
+                  key="racing"
+                  playerName={playerName}
+                  onGameOver={saveScore}
+                  onNameChange={(name) => setPlayerName(name)}
+                />
+              )}
+              {activeGame === 'flappy' && (
+                <FlappyGame
+                  key="flappy"
+                  playerName={playerName}
+                  onGameOver={saveScore}
+                  onNameChange={(name) => setPlayerName(name)}
+                />
+              )}
+            </Suspense>
           </div>
         </div>
 

@@ -1,7 +1,43 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 const FloatingIcons: React.FC = () => {
+  // Detect mobile / reduced-motion once. On mobile we render a much lighter
+  // background (no remote SVG fetches, no transform animations) since the
+  // 24+ floating images previously caused major paint and network overhead.
+  const [lite, setLite] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    return (
+      window.innerWidth < 1024 ||
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches ||
+      window.matchMedia('(pointer: coarse)').matches
+    );
+  });
+
+  useEffect(() => {
+    const mql = window.matchMedia('(max-width: 1023px), (prefers-reduced-motion: reduce), (pointer: coarse)');
+    const update = () => setLite(mql.matches);
+    update();
+    mql.addEventListener?.('change', update);
+    return () => mql.removeEventListener?.('change', update);
+  }, []);
+
+  if (lite) {
+    // Ultra-light static background for mobile / reduced-motion users.
+    return (
+      <div className="fixed inset-0 pointer-events-none z-[-1] overflow-hidden bg-[#FFF9E6]">
+        <div className="absolute inset-0 halftone-bg opacity-20" />
+        <div
+          className="absolute inset-0 opacity-[0.05]"
+          style={{
+            backgroundImage: 'radial-gradient(#000 1px, transparent 0)',
+            backgroundSize: '40px 40px',
+          }}
+        />
+      </div>
+    );
+  }
+
   // Vector SVG data URIs
   const powerAppsSvg = `data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0OCA0OCI+PHBhdGggZmlsbD0iIzc0Mjc3NCIgZD0iTTEyLjQ0IDM1LjJsMTIuNCAxMi40Yy41NS41NSAxLjQ0LjU1IDEuOTkgMGwxNy44MS0xNy44MWMuNTUtLjU1LjU1LTEuNDQgMC0xLjk5TDMyLjI0IDE1LjQgMTIuNDQgMzUuMnoiLz48cGF0aCBmaWxsPSIjQzE2QUMxIiBkPSJNMzUuMSAxMi4zNWwtMTIuNC0xMi40Yy0uNTUtLjU1LTEuNDQtLjU1LTEuOTkgMEwyLjg5IDE3Ljc2Yy0uNTUuNTUtLjU1IDEuNDQgMCAxLjk5bDEyLjQgMTIuNCAxOS44MS0xOS44eiIvPjxwYXRoIGZpbGw9IiNEOTk5RDkiIGQ9Ik0zMi4yNCAxNS40TDE1LjMgMzIuMzVsMTIuNCAxMi40Yy41NS41NSAxLjQ0LjU1IDEuOTkgMGwxMi40LTEyLjRjLjU1LS41NS41NS0xLjQ0IDAtMS45OUwzMi4yNCAxNS40eiIvPjwvc3ZnPg==`;
   const powerAutomateSvg = `data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0OCI+PHBhdGggZmlsbD0iIzAwNUE5RSIgZD0iTTMuNyAxMS4zbDEyLjQtMTIuNGMuNS0uNSAxLjQtLjUgMS45IDBMNDQuMyAyNS4yYy41LjUuNSAxLjQgMCAxLjlsLTEyLjQgMTIuNE0zLjcgMTEuM3oiLz48cGF0aCBmaWxsPSIjMTA2RUJFIiBkPSJNMjEgMjguNmwxMi40IDEyLjRjLjUuNSAxLjQuNSAxLjkgMGwxMi40LTEyLjRjLjUtLjUuNS0xLjQgMC0xLjlMMjEgMjguNnoiLz48cGF0aCBmaWxsPSIjM0E5NkREIiBkPSJNMjEgMjguNkw0LjcgMTIuM2MtLjUtLjUtLjUtMS40IDAtMS45bDEyLjQtMTIuNGMuNS0uNSAxLjQtLjUgMS45IDBsMzEuNyAzMS43Yy41LjUuNSAxLjQgMCAxLjlsLTEyLjQgMTIuNEwyMSAyOC42eiIvPjwvc3ZnPg==`;
@@ -52,7 +88,10 @@ const FloatingIcons: React.FC = () => {
         >
           <img 
             src={`https://cdn.jsdelivr.net/gh/devicons/devicon/icons/${stamp.name}/${stamp.name}-original.svg`} 
-            alt="stamp" 
+            alt="" 
+            aria-hidden="true"
+            loading="lazy"
+            decoding="async"
             className="w-full h-full object-contain"
             onError={(e) => (e.currentTarget.style.display = 'none')}
           />
@@ -87,7 +126,10 @@ const FloatingIcons: React.FC = () => {
         >
           <img 
             src={char.url} 
-            alt={char.id} 
+            alt="" 
+            aria-hidden="true"
+            loading="lazy"
+            decoding="async"
             className="w-full h-full object-contain filter contrast-[0.8] grayscale hover:grayscale-0 transition-all duration-500"
           />
         </div>

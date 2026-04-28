@@ -12,14 +12,30 @@ const Hero: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    // Skip the expensive parallax loop on touch devices and when the user
+    // prefers reduced motion (saves a constant stream of re-renders on mobile).
+    if (typeof window === 'undefined') return;
+    const isFinePointer = window.matchMedia('(pointer: fine)').matches;
+    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!isFinePointer || prefersReduced) return;
+
+    let rafId = 0;
+    let nextX = 0;
+    let nextY = 0;
     const handleMouseMove = (e: MouseEvent) => {
-      setMousePos({
-        x: (e.clientX / window.innerWidth - 0.5) * 40,
-        y: (e.clientY / window.innerHeight - 0.5) * 40,
+      nextX = (e.clientX / window.innerWidth - 0.5) * 40;
+      nextY = (e.clientY / window.innerHeight - 0.5) * 40;
+      if (rafId) return;
+      rafId = window.requestAnimationFrame(() => {
+        setMousePos({ x: nextX, y: nextY });
+        rafId = 0;
       });
     };
-    window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mousemove', handleMouseMove, { passive: true });
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      if (rafId) cancelAnimationFrame(rafId);
+    };
   }, []);
 
   // High-quality vector SVG data URIs for Microsoft Power Platform
@@ -64,19 +80,22 @@ const Hero: React.FC = () => {
         }}
       />
 
-      {/* Interactive Tech Logos Layer */}
+      {/* Interactive Tech Logos Layer (decorative — hidden on mobile to save paint cost) */}
       {techStack.map((tech, i) => (
         <div
           key={i}
-          className={`absolute ${tech.pos} ${tech.size} floating opacity-40 md:opacity-70 z-0 pointer-events-none transition-transform duration-300 ease-out p-1`}
+          className={`hidden md:block absolute ${tech.pos} ${tech.size} floating opacity-40 md:opacity-70 z-0 pointer-events-none transition-transform duration-300 ease-out p-1`}
           style={{
             animationDelay: tech.delay,
-            transform: `translate(${mousePos.x * tech.factor}px, ${mousePos.y * tech.factor}px)`
+            transform: `translate3d(${mousePos.x * tech.factor}px, ${mousePos.y * tech.factor}px, 0)`
           }}
         >
           <img
             src={tech.url}
-            alt={tech.name}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            aria-hidden="true"
             className="w-full h-full object-contain drop-shadow-[0_0_12px_rgba(255,214,0,0.3)]"
           />
         </div>

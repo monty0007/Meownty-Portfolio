@@ -12,9 +12,10 @@ const Scribble: React.FC<{ className?: string }> = ({ className }) => (
 
 const ProjectCard: React.FC<{ project: Project; index: number }> = ({ project, index }) => {
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const isDesktop = typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches;
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (window.innerWidth < 1024) return;
+    if (!isDesktop) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const x = (e.clientX - rect.left) / rect.width - 0.5;
     const y = (e.clientY - rect.top) / rect.height - 0.5;
@@ -29,7 +30,8 @@ const ProjectCard: React.FC<{ project: Project; index: number }> = ({ project, i
       <div
         className="relative w-full h-full flex flex-col md:flex-row items-center gap-8 md:gap-0"
         style={{
-          transform: window.innerWidth >= 1024 ? `rotateX(${mousePos.y * -3}deg) rotateY(${mousePos.x * 5}deg)` : 'none'
+          transform: isDesktop ? `rotateX(${mousePos.y * -3}deg) rotateY(${mousePos.x * 5}deg)` : 'none',
+          willChange: isDesktop ? 'transform' : 'auto',
         }}>
         <div className="absolute -top-10 left-0 text-[12rem] md:text-[25rem] font-black text-black opacity-[0.03] select-none pointer-events-none leading-none z-0">
           0{index + 1}
@@ -44,6 +46,8 @@ const ProjectCard: React.FC<{ project: Project; index: number }> = ({ project, i
             <img
               src={project.image}
               alt={project.title}
+              loading="lazy"
+              decoding="async"
               className="w-full h-full object-cover grayscale-0 lg:grayscale lg:group-hover/img:grayscale-0 transition-all duration-700 scale-100 lg:scale-105 lg:group-hover/img:scale-100"
             />
             <div className="absolute inset-0 opacity-20 pointer-events-none bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.1)_50%)] bg-[length:100%_4px]"></div>
@@ -112,16 +116,33 @@ const Projects: React.FC = () => {
   const [scrollProgress, setScrollProgress] = useState(0);
   const [projects, setProjects] = useState<Project[]>([]);
 
+  // Detect mobile to disable heavy 3D transforms / scroll-driven layout completely.
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== 'undefined' ? window.innerWidth < 1024 : false
+  );
+  useEffect(() => {
+    const mql = window.matchMedia('(max-width: 1023px)');
+    const update = () => setIsMobile(mql.matches);
+    update();
+    mql.addEventListener?.('change', update);
+    return () => mql.removeEventListener?.('change', update);
+  }, []);
+
   useEffect(() => {
     getProjects().then(setProjects);
   }, []);
 
   useEffect(() => {
+    // Skip the expensive scroll-progress loop on mobile entirely.
+    if (isMobile) return;
     let ticking = false;
     const handleScroll = () => {
       if (!ticking) {
         window.requestAnimationFrame(() => {
-          if (!sectionRef.current) return;
+          if (!sectionRef.current) {
+            ticking = false;
+            return;
+          }
           const rect = sectionRef.current.getBoundingClientRect();
           const windowHeight = window.innerHeight;
           const totalDist = rect.height - windowHeight;
@@ -135,17 +156,87 @@ const Projects: React.FC = () => {
 
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [isMobile]);
 
-  // Detect mobile to disable heavy 3D transforms completely
-  const [isMobile, setIsMobile] = useState(false);
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 1024);
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
+  // ── MOBILE: lightweight stacked layout, no sticky/horizontal scroll ──
+  if (isMobile) {
+    return (
+      <section
+        id="projects"
+        className="relative bg-[#FFF9E6] border-y-8 border-black py-16 px-4"
+      >
+        <div className="text-center mb-10">
+          <div className="inline-block bg-[#FFD600] border-4 border-black px-5 py-2 font-black uppercase text-xs tracking-widest -rotate-1 shadow-[4px_4px_0px_#000] mb-4">
+            Featured Works
+          </div>
+          <h2 className="text-6xl sm:text-7xl font-black uppercase tracking-tighter leading-none italic">
+            W<span className="text-white" style={{ WebkitTextStroke: '2px black', textShadow: '4px 4px 0px #FF4B4B' }}>OR</span>KS
+          </h2>
+        </div>
 
+        <div className="space-y-10 max-w-xl mx-auto">
+          {projects.slice(0, 3).map((project, index) => (
+            <article
+              key={project.id}
+              className="bg-white border-[4px] border-black shadow-[8px_8px_0px_#000] overflow-hidden"
+            >
+              <div className="relative">
+                <div className="absolute top-3 left-3 bg-black text-[#FFD600] px-3 py-1 font-black uppercase text-[10px] z-10 border-2 border-black">
+                  SCHEMA_DATA_{index + 1}
+                </div>
+                <img
+                  src={project.image}
+                  alt={project.title}
+                  loading="lazy"
+                  decoding="async"
+                  className="w-full aspect-[16/10] object-cover border-b-4 border-black"
+                />
+              </div>
+              <div className="p-5">
+                <h3 className="text-2xl font-black uppercase leading-tight mb-3 tracking-tighter text-black">
+                  {project.title}
+                </h3>
+                <p className="font-bold text-gray-800 italic text-sm mb-4 leading-snug">
+                  "{project.description}"
+                </p>
+                <div className="flex flex-wrap gap-1.5 mb-4">
+                  {project.tags.map(tag => (
+                    <span key={tag} className="bg-black text-white px-2 py-0.5 text-[10px] font-black uppercase tracking-tighter border-2 border-black">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+                <a
+                  href={project.disabled ? undefined : project.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => { if (project.disabled) e.preventDefault(); }}
+                  className={`block w-full text-center py-3 font-black uppercase border-4 border-black ${
+                    project.disabled
+                      ? 'bg-gray-300 text-gray-600 cursor-not-allowed shadow-[4px_4px_0px_#000]'
+                      : 'bg-[#FFD600] text-black shadow-[6px_6px_0px_#000] active:translate-y-1 active:shadow-none'
+                  }`}
+                >
+                  {project.disabled ? 'ENTERPRISE ONLY ⭐' : 'VIEW PROJECT →'}
+                </a>
+              </div>
+            </article>
+          ))}
+        </div>
+
+        <div className="mt-10 text-center">
+          <button
+            onClick={() => navigate('/projects')}
+            className="bg-black text-[#FFD600] border-4 border-black px-8 py-3 font-black uppercase tracking-widest shadow-[6px_6px_0px_#FFD600] active:translate-y-1 active:shadow-none"
+          >
+            View All Projects →
+          </button>
+        </div>
+      </section>
+    );
+  }
+
+  // ── DESKTOP: original cinematic horizontal scroll experience ──
   let pinProgress = 0;
   if (scrollProgress > 0.20) {
     pinProgress = Math.min((scrollProgress - 0.20) / 0.25, 1);

@@ -52,6 +52,10 @@
     <!-- Preconnect for faster font loading -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- Preconnect for decorative tech icons (CDN) -->
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <!-- Preload above-the-fold hero portrait so it paints early -->
+    <link rel="preload" as="image" href="/weeww.webp" fetchpriority="high">
     <!-- Async load fonts to prevent render blocking -->
     <link rel="preload" as="style"
         href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300;400;500;600;700&display=swap">
@@ -140,6 +144,14 @@
 
             100% {
                 opacity: 0.2;
+            }
+        }
+
+        /* Mobile: kill the constantly-repainting CRT flicker animation */
+        @media (max-width: 1023px) {
+            .crt-screen::after {
+                animation: none !important;
+                opacity: 0 !important;
             }
         }
 

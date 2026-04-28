@@ -64,10 +64,7 @@ const Achievements: React.FC = () => {
             {achievements.map((achievement, index) => (
               <div
                 key={achievement.id}
-                className="relative group"
-                style={{ transform: `rotate(${index % 2 === 0 ? '-1deg' : '1deg'})`, transition: 'transform 0.3s ease' }}
-                onMouseEnter={e => (e.currentTarget.style.transform = 'rotate(0deg) translateY(-8px)')}
-                onMouseLeave={e => (e.currentTarget.style.transform = `rotate(${index % 2 === 0 ? '-1deg' : '1deg'})`)}
+                className={`relative group ach-card ${index % 2 === 0 ? 'ach-tilt-l' : 'ach-tilt-r'}`}
               >
                 {/* Rank Badge */}
                 <div className="absolute -top-5 -left-5 z-20 w-12 h-12 flex items-center justify-center text-3xl drop-shadow-[2px_2px_0px_rgba(0,0,0,0.8)]">
@@ -119,6 +116,12 @@ const Achievements: React.FC = () => {
       <style>{`
         .clip-path-sticker {
           clip-path: polygon(100% 0, 0 0, 100% 100%);
+        }
+        .ach-card { transition: transform 0.3s ease; }
+        .ach-tilt-l { transform: rotate(-1deg); }
+        .ach-tilt-r { transform: rotate(1deg); }
+        @media (hover: hover) and (pointer: fine) {
+          .ach-card:hover { transform: rotate(0deg) translateY(-8px); }
         }
       `}</style>
     </section>

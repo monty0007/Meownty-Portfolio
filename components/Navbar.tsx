@@ -21,7 +21,8 @@ const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentView }) => {
   }, []);
 
   useEffect(() => {
-    const handleScroll = () => {
+    let ticking = false;
+    const compute = () => {
       const currentScrollY = window.scrollY;
 
       // Hide navbar if inside #projects section
@@ -32,6 +33,7 @@ const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentView }) => {
         if (isInsideProjects) {
           setIsVisible(false);
           setLastScrollY(currentScrollY);
+          ticking = false;
           return;
         }
       }
@@ -42,6 +44,13 @@ const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentView }) => {
         setIsVisible(true);
       }
       setLastScrollY(currentScrollY);
+      ticking = false;
+    };
+
+    const handleScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      window.requestAnimationFrame(compute);
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });

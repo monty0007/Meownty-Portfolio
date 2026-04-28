@@ -213,8 +213,49 @@ export const getPosts = async (): Promise<BlogPost[]> => {
     }
 };
 
+export const getPostById = async (id: number): Promise<BlogPost | null> => {
+    try {
+        const result = await db.execute({
+            sql: 'SELECT * FROM posts WHERE id = ?',
+            args: [id]
+        });
+        if (result.rows.length === 0) return null;
+        const row = result.rows[0];
+        const formatDate = (d: string) => {
+            try {
+                const dt = new Date(d);
+                if (!isNaN(dt.getTime())) {
+                    return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                        .replace(/^[A-Za-z]+/, m => m.toUpperCase());
+                }
+            } catch { /* fall through */ }
+            return d;
+        };
+        return {
+            id: Number(row.id),
+            slug: String(row.slug),
+            title: String(row.title),
+            excerpt: String(row.excerpt),
+            content: String(row.content),
+            author: String(row.author),
+            date: formatDate(String(row.created_at)),
+            readTime: String(row.read_time),
+            image: String(row.image_url),
+            tags: parseTags(row.tags),
+            category: String(row.category || ''),
+            color: String(row.color || ''),
+            sections: parseTags(row.sections),
+            liveLink: String(row.live_link || ''),
+            isDraft: Boolean(row.is_draft),
+            scheduledDate: String(row.scheduled_date || '')
+        };
+    } catch (error) {
+        console.error(`Failed to fetch post by id ${id}:`, error);
+        return null;
+    }
+};
+
 export const getPostBySlug = async (slug: string): Promise<BlogPost | null> => {
-    if (fullPostCache.has(slug)) return fullPostCache.get(slug)!;
 
     // Helper to format date for display  
     const formatDateForDisplay = (dateStr: string): string => {

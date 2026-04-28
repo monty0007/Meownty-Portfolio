@@ -21,7 +21,8 @@ const GeminiBot: React.FC = () => {
 
   // Hide bot when inside #projects section
   useEffect(() => {
-    const handleScroll = () => {
+    let ticking = false;
+    const compute = () => {
       const projectsSection = document.getElementById('projects');
       if (projectsSection) {
         const rect = projectsSection.getBoundingClientRect();
@@ -30,10 +31,16 @@ const GeminiBot: React.FC = () => {
       } else {
         setIsHidden(false);
       }
+      ticking = false;
+    };
+    const handleScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      window.requestAnimationFrame(compute);
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
-    handleScroll(); // Check on mount
+    compute(); // Check on mount
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 

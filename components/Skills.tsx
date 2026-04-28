@@ -1,13 +1,33 @@
 
-import React, { useState, useEffect } from 'react';
-import { Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer } from 'recharts';
+import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { SKILLS } from '../constants';
+
+// Recharts is large (~150kb gzipped). Load it only when the chart scrolls into view.
+const RadarChartLazy = lazy(() => import('./SkillsRadar'));
 
 const Skills: React.FC = () => {
   const [currentSkills, setCurrentSkills] = useState(SKILLS);
   const [isResetting, setIsResetting] = useState(false);
   const [radius, setRadius] = useState('50%'); // Default to smaller radius for mobile safety
   const [fontSize, setFontSize] = useState(10); // Default font size
+  const chartHostRef = useRef<HTMLDivElement>(null);
+  const [chartVisible, setChartVisible] = useState(false);
+
+  useEffect(() => {
+    if (chartVisible || !chartHostRef.current) return;
+    const el = chartHostRef.current;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some(e => e.isIntersecting)) {
+          setChartVisible(true);
+          io.disconnect();
+        }
+      },
+      { rootMargin: '200px' }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [chartVisible]);
 
   useEffect(() => {
     // Adjust radius based on screen size to prevent label clipping
@@ -156,25 +176,14 @@ const Skills: React.FC = () => {
           <div className="absolute top-2 left-2 text-[10px] font-black uppercase bg-black text-white px-2">Live_Telemetry</div>
           <div className="absolute bottom-2 right-2 text-[10px] font-black uppercase text-gray-400">Arch_v2.5</div>
 
-          <div className="w-full h-full pointer-events-none lg:pointer-events-auto" style={{ minHeight: '300px' }}>
-            <ResponsiveContainer width="100%" height="100%" minHeight={300}>
-              <RadarChart cx="50%" cy="50%" outerRadius={radius} data={data}>
-                <PolarGrid stroke="#000" strokeWidth={1} strokeDasharray="3 3" />
-                <PolarAngleAxis
-                  dataKey="subject"
-                  tick={{ fill: '#000', fontWeight: '900', fontSize: fontSize }}
-                />
-                <Radar
-                  name="Stats"
-                  dataKey="A"
-                  stroke="#FF4B4B"
-                  strokeWidth={4}
-                  fill="#FF4B4B"
-                  fillOpacity={0.6}
-                  animationDuration={600}
-                />
-              </RadarChart>
-            </ResponsiveContainer>
+          <div ref={chartHostRef} className="w-full h-full pointer-events-none lg:pointer-events-auto" style={{ minHeight: '300px' }}>
+            {chartVisible ? (
+              <Suspense fallback={<div className="w-full h-full flex items-center justify-center text-xs font-black uppercase text-gray-400">Loading chart…</div>}>
+                <RadarChartLazy data={data} radius={radius} fontSize={fontSize} />
+              </Suspense>
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-xs font-black uppercase text-gray-400">Telemetry standby…</div>
+            )}
           </div>
         </div>
       </div>

@@ -1,14 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import FloatingIcons from './components/FloatingIcons';
-import GeminiBot from './components/GeminiBot';
 import Footer from './components/Footer';
-import Blog from './components/Blog';
-import Admin from './components/Admin';
 import Home from './components/Home';
-import ProjectsPage from './components/ProjectsPage';
 import Toast from './components/Toast';
+
+// Heavy/secondary routes are code-split so the initial bundle stays small.
+const Blog = lazy(() => import('./components/Blog'));
+const Admin = lazy(() => import('./components/Admin'));
+const ProjectsPage = lazy(() => import('./components/ProjectsPage'));
+const GeminiBot = lazy(() => import('./components/GeminiBot'));
+
+const RouteFallback: React.FC = () => (
+  <div className="min-h-[60vh] flex items-center justify-center">
+    <div className="w-10 h-10 border-4 border-black border-t-transparent rounded-full animate-spin" />
+  </div>
+);
 
 const AppContent: React.FC = () => {
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -76,13 +84,15 @@ const AppContent: React.FC = () => {
       <Navbar onNavigate={handleNavigate} currentView={location.pathname === '/blog' ? 'blog' : location.pathname === '/admin' ? 'admin' : location.pathname === '/projects' ? 'projects' : 'home'} />
 
       <main className="relative z-10">
-        <Routes>
-          <Route path="/" element={<Home targetSection={targetSection} setTargetSection={setTargetSection} />} />
-          <Route path="/blog" element={<Blog />} />
-          <Route path="/blog/:slug" element={<Blog />} />
-          <Route path="/admin" element={<Admin onBack={() => handleNavigate('home')} />} />
-          <Route path="/projects" element={<ProjectsPage />} />
-        </Routes>
+        <Suspense fallback={<RouteFallback />}>
+          <Routes>
+            <Route path="/" element={<Home targetSection={targetSection} setTargetSection={setTargetSection} />} />
+            <Route path="/blog" element={<Blog />} />
+            <Route path="/blog/:slug" element={<Blog />} />
+            <Route path="/admin" element={<Admin onBack={() => handleNavigate('home')} />} />
+            <Route path="/projects" element={<ProjectsPage />} />
+          </Routes>
+        </Suspense>
       </main>
 
       <Footer onNavigate={handleNavigate} />
@@ -136,7 +146,9 @@ const AppContent: React.FC = () => {
 const App: React.FC = () => {
   return (
     <Router>
-      <AppContent />
+      <Suspense fallback={null}>
+        <AppContent />
+      </Suspense>
     </Router>
   );
 };

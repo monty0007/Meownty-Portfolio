@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { getPosts, createPost, deletePost, updatePost, invalidateBlogCache, BlogPost } from '../services/blogService';
+import { getPosts, createPost, deletePost, updatePost, invalidateBlogCache, getPostById, BlogPost } from '../services/blogService';
 import { getAchievements, addAchievement, deleteAchievement } from '../services/dataService';
 import { getProjects, createProject, updateProject, deleteProject, saveProjectOrder } from '../services/projectService';
 import { Achievement, Project } from '../types';
@@ -319,14 +319,19 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     }
   };
 
-  const handleEditBlog = (blog: BlogPost) => {
+  const handleEditBlog = async (blog: BlogPost) => {
     setEditingBlogId(blog.id);
+    showFeedback("Loading blog for editing... ✏️");
+
+    // Fetch full post to get sections (lite list doesn't include sections)
+    const fullBlog = await getPostById(blog.id);
+    const source = fullBlog || blog;
+
     // Parse the date from the blog (e.g., "JAN 27, 2026") to YYYY-MM-DD format
     let dateValue = getTodayDate();
     try {
-      const parsedDate = new Date(blog.date);
+      const parsedDate = new Date(source.date);
       if (!isNaN(parsedDate.getTime())) {
-        // Use local date components to avoid timezone shift
         const year = parsedDate.getFullYear();
         const month = String(parsedDate.getMonth() + 1).padStart(2, '0');
         const day = String(parsedDate.getDate()).padStart(2, '0');
@@ -337,13 +342,12 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     }
 
     // Process sections to replace base64 images with tokens for cleaner editing
-    const sections = blog.sections || [];
+    const sections = source.sections || [];
     const newImageMap: { [key: string]: string } = {};
     let imgCounter = 1;
 
     const processedSections = sections.map((section: any) => {
       if (section.type === 'image' && section.content && section.content.startsWith('data:image')) {
-        // This is a base64 image - replace with a token
         const token = `IMG_EXISTING_${imgCounter++}`;
         newImageMap[token] = section.content;
         return { ...section, content: `{{${token}}}` };
@@ -354,16 +358,16 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     setImageMap(newImageMap);
 
     setNewBlog({
-      title: blog.title,
-      category: blog.category || 'Engineering',
-      excerpt: blog.excerpt,
+      title: source.title,
+      category: source.category || 'Engineering',
+      excerpt: source.excerpt,
       sectionsJSON: JSON.stringify(processedSections, null, 2),
-      color: blog.color || '#FF4B4B',
-      image: blog.image || '',
+      color: source.color || '#FF4B4B',
+      image: source.image || '',
       date: dateValue,
-      liveLink: blog.liveLink || '',
-      isDraft: !!blog.isDraft,
-      scheduledDate: blog.scheduledDate || ''
+      liveLink: source.liveLink || '',
+      isDraft: !!source.isDraft,
+      scheduledDate: source.scheduledDate || ''
     });
     setErrors({});
     showFeedback("Blog loaded for editing! ✏️");

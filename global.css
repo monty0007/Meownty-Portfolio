@@ -4,9 +4,49 @@
 @layer base {
   html {
     scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeSpeed;
   }
 
   body {
     @apply bg-[#FFF9E6] text-[#1A1A1A] font-[Fredoka] overflow-x-hidden;
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  img, svg {
+    @apply max-w-full h-auto;
+  }
+}
+
+/* ─── Performance: respect reduced motion ─────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ─── Performance: mobile-first reductions ────────────────────────────
+   backdrop-filter is one of the most expensive CSS properties on mobile
+   GPUs. Replace it with a cheap solid background fallback on small
+   screens. Also cap heavy infinite animations there.                    */
+@media (max-width: 1023px) {
+  .backdrop-blur-sm,
+  .backdrop-blur,
+  .backdrop-blur-md,
+  .backdrop-blur-lg,
+  .backdrop-blur-xl {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  /* Pause the floating tech-icon keyframe on mobile (icons are hidden
+     anyway, but this avoids any stray paint work). */
+  .floating {
+    animation: none !important;
+    will-change: auto !important;
   }
 }

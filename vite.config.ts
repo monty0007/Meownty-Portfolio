@@ -19,6 +19,28 @@ export default defineConfig(({ mode }) => {
         alias: {
           '@': path.resolve(__dirname, '.'),
         }
-      }
+      },
+      build: {
+        target: 'es2020',
+        cssCodeSplit: true,
+        sourcemap: false,
+        chunkSizeWarningLimit: 800,
+        rollupOptions: {
+          output: {
+            // Split heavy third-party deps into their own chunks so they
+            // don't block the initial paint on mobile networks.
+            manualChunks: (id) => {
+              if (!id.includes('node_modules')) return undefined;
+              if (id.includes('recharts') || id.includes('d3-')) return 'vendor-charts';
+              if (id.includes('@google/genai')) return 'vendor-genai';
+              if (id.includes('@emailjs')) return 'vendor-email';
+              if (id.includes('@libsql')) return 'vendor-db';
+              if (id.includes('react-router')) return 'vendor-router';
+              if (id.includes('react-dom') || id.includes('react/') || id.includes('scheduler')) return 'vendor-react';
+              return 'vendor';
+            },
+          },
+        },
+      },
     };
 });
