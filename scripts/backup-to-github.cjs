@@ -25,6 +25,7 @@ function fail(msg) {
 }
 
 if (!TURSO_URL) fail('VITE_TURSO_DATABASE_URL is missing');
+if (!TURSO_TOKEN) fail('VITE_TURSO_AUTH_TOKEN is missing');
 if (!GH_TOKEN) fail('BACKUP_GH_TOKEN is missing');
 if (!REPO || !REPO.includes('/')) fail('BACKUP_REPO must be set as "owner/repo"');
 
@@ -40,10 +41,16 @@ const headers = {
 // Encode UTF-8 string as base64
 const toB64 = (s) => Buffer.from(s, 'utf8').toString('base64');
 
-// Fetch existing file SHA (needed for updates). Returns null if file does not exist.
-async function getFileSha(path) {
+// Encode a repository path correctly: encode each segment but preserve '/' separators.
+// GitHub's Contents API uses {+path} (exploded URI template) so '/' must NOT be encoded.
+const encodeGHPath = (p) => p.split('/').map(encodeURIComponent).join('/');
+
+// Fetch existing file info (sha + decoded content). Returns null if file does not exist.
+// Content may be null for files > 1 MB (GitHub omits it); in that case we skip the
+// equality check and always overwrite.
+async function getFileInfo(path) {
   const res = await fetch(
-    `${GH_API}/repos/${REPO}/contents/${encodeURIComponent(path)}?ref=${encodeURIComponent(BRANCH)}`,
+    `${GH_API}/repos/${REPO}/contents/${encodeGHPath(path)}?ref=${encodeURIComponent(BRANCH)}`,
     { headers }
   );
   if (res.status === 404) return null;
@@ -52,29 +59,20 @@ async function getFileSha(path) {
     throw new Error(`GET ${path} failed: ${res.status} ${txt}`);
   }
   const data = await res.json();
-  return data.sha;
+  return {
+    sha: data.sha,
+    // data.content is base64 with embedded newlines — Buffer handles that natively
+    content: data.content ? Buffer.from(data.content, 'base64').toString('utf8') : null,
+  };
 }
 
 // Create or update a file in the backup repo. Skips network write if content unchanged.
 async function putFile(path, content, message) {
-  const sha = await getFileSha(path);
+  const info = await getFileInfo(path);
 
-  // If the file exists, compare its content via a separate fetch to avoid useless commits.
-  // The contents API in GET above only returns metadata when file is large; we'll just compare via a HEAD-content fetch:
-  if (sha) {
-    const existingRes = await fetch(
-      `${GH_API}/repos/${REPO}/contents/${encodeURIComponent(path)}?ref=${encodeURIComponent(BRANCH)}`,
-      { headers }
-    );
-    if (existingRes.ok) {
-      const existing = await existingRes.json();
-      if (existing.content) {
-        const existingDecoded = Buffer.from(existing.content, 'base64').toString('utf8');
-        if (existingDecoded === content) {
-          return { skipped: true };
-        }
-      }
-    }
+  // Skip write if content is identical (avoids empty commits)
+  if (info && info.content !== null && info.content === content) {
+    return { skipped: true };
   }
 
   const body = {
@@ -82,10 +80,10 @@ async function putFile(path, content, message) {
     content: toB64(content),
     branch: BRANCH,
   };
-  if (sha) body.sha = sha;
+  if (info) body.sha = info.sha;
 
   const res = await fetch(
-    `${GH_API}/repos/${REPO}/contents/${encodeURIComponent(path)}`,
+    `${GH_API}/repos/${REPO}/contents/${encodeGHPath(path)}`,
     { method: 'PUT', headers, body: JSON.stringify(body) }
   );
   if (!res.ok) {
