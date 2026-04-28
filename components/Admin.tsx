@@ -547,7 +547,29 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       await saveProjectOrder(updated.map(p => p.id));
       showFeedback(direction === 'up' ? 'Project moved up! ⬆️' : 'Project moved down! ⬇️');
     } catch {
-      // Revert optimistic update on failure
+      setProjects(projects);
+      showFeedback('Failed to save order! 🛑', 'error');
+    }
+  };
+
+  const dragIndexRef = useRef<number | null>(null);
+
+  const handleDragStart = (index: number) => {
+    dragIndexRef.current = index;
+  };
+
+  const handleDrop = async (dropIndex: number) => {
+    const dragIndex = dragIndexRef.current;
+    if (dragIndex === null || dragIndex === dropIndex) return;
+    const updated = [...projects];
+    const [dragged] = updated.splice(dragIndex, 1);
+    updated.splice(dropIndex, 0, dragged);
+    dragIndexRef.current = null;
+    setProjects(updated);
+    try {
+      await saveProjectOrder(updated.map(p => p.id));
+      showFeedback('Order saved! ✅');
+    } catch {
       setProjects(projects);
       showFeedback('Failed to save order! 🛑', 'error');
     }
@@ -1217,8 +1239,8 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
 
       {/* ======== PROJECTS TAB ======== */}
       {tab === 'projects' && (
-        <div className="max-w-6xl mx-auto px-6 pb-20">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 text-black">
+        <div className="max-w-[1400px] mx-auto px-6 pb-20">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-10 text-black">
           {/* Form */}
           <div ref={projectFormRef} className="lg:col-span-2 space-y-8">
             <div className="bg-white border-4 border-black p-8 shadow-[10px_10px_0px_#000]">
@@ -1366,59 +1388,57 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
             </div>
           </div>
 
-          {/* Sidebar list */}
-          <div className="space-y-4">
-            <h3 className="font-black uppercase text-sm border-b-4 border-black pb-2 mb-4">Active Projects</h3>
-            <div className="overflow-y-auto max-h-[800px] space-y-3 pr-2 custom-scrollbar">
-              {projects.length === 0 && (
-                <div className="bg-white border-4 border-black p-4 text-center font-bold text-gray-500">
-                  No projects yet. Launch your first one!
-                </div>
-              )}
-              {projects.map(project => (
+          {/* Drag-and-drop order grid */}
+          <div className="lg:col-span-3 space-y-4">
+            <div className="flex items-center justify-between border-b-4 border-black pb-2 mb-4">
+              <h3 className="font-black uppercase text-sm">Project Order</h3>
+              <span className="text-[10px] font-black uppercase text-gray-400 bg-gray-100 border-2 border-black px-2 py-0.5">Drag to reorder</span>
+            </div>
+            {projects.length === 0 && (
+              <div className="bg-white border-4 border-black p-4 text-center font-bold text-gray-500">
+                No projects yet. Launch your first one!
+              </div>
+            )}
+            <div className="grid grid-cols-3 xl:grid-cols-4 gap-3">
+              {projects.map((project, index) => (
                 <div
                   key={project.id}
-                  className={`bg-white border-4 border-black p-4 shadow-[4px_4px_0px_#000] ${
-                    editingProjectId === project.id ? 'ring-4 ring-[#00A1FF]' : ''
-                  }`}
+                  draggable
+                  onDragStart={() => handleDragStart(index)}
+                  onDragOver={e => e.preventDefault()}
+                  onDrop={() => handleDrop(index)}
+                  className={`relative group cursor-grab active:cursor-grabbing border-4 border-black shadow-[4px_4px_0px_#000] hover:shadow-[6px_6px_0px_#000] hover:-translate-y-1 transition-all bg-white overflow-hidden ${editingProjectId === project.id ? 'ring-4 ring-[#00A1FF]' : ''}`}
                 >
-                  <div className="flex gap-3 items-start">
-                    {project.image && (
-                      <img src={project.image} alt={project.title} className="w-16 h-12 object-cover border-2 border-black flex-shrink-0" />
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <div className="truncate font-black uppercase text-sm text-black">{project.title}</div>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {project.tags.slice(0, 3).map(t => (
-                          <span key={t} className="bg-black text-white text-[9px] px-1.5 py-0.5 font-black uppercase">{t}</span>
-                        ))}
+                  {/* Thumbnail */}
+                  <div className="relative w-full aspect-video bg-gray-100">
+                    {project.image ? (
+                      <img src={project.image} alt={project.title} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center" style={{ backgroundColor: project.color }}>
+                        <span className="text-2xl font-black text-black/30 uppercase">{project.title.charAt(0)}</span>
                       </div>
+                    )}
+                    {/* Order number pill */}
+                    <div className="absolute top-1.5 left-1.5 w-6 h-6 bg-black text-white font-black text-[10px] flex items-center justify-center border-2 border-white">
+                      {index + 1}
                     </div>
+                    {/* Drag handle overlay */}
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                      <div className="bg-white/90 border-2 border-black px-2 py-0.5 font-black text-[10px] uppercase">⠿ Drag</div>
+                    </div>
+                  </div>
+                  {/* Name + actions */}
+                  <div className="p-2 flex items-center justify-between gap-1">
+                    <span className="text-[11px] font-black uppercase truncate flex-1">{project.title}</span>
                     <div className="flex gap-1 flex-shrink-0">
                       <button
-                        onClick={() => moveProject(projects.indexOf(project), 'up')}
-                        disabled={projects.indexOf(project) === 0}
-                        className={`w-7 h-7 border-2 border-black font-black text-xs shadow-[2px_2px_0px_#000] transition-all ${projects.indexOf(project) === 0 ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-gray-100 text-black hover:bg-gray-300'}`}
-                        title="Move up"
-                      >↑</button>
-                      <button
-                        onClick={() => moveProject(projects.indexOf(project), 'down')}
-                        disabled={projects.indexOf(project) === projects.length - 1}
-                        className={`w-7 h-7 border-2 border-black font-black text-xs shadow-[2px_2px_0px_#000] transition-all ${projects.indexOf(project) === projects.length - 1 ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-gray-100 text-black hover:bg-gray-300'}`}
-                        title="Move down"
-                      >↓</button>
-                      <button
                         onClick={() => handleEditProject(project)}
-                        className="px-3 py-1 bg-[#00A1FF] text-white border-2 border-black font-black text-xs uppercase hover:bg-blue-400 shadow-[2px_2px_0px_#000]"
-                      >
-                        EDIT
-                      </button>
+                        className="px-2 py-0.5 bg-[#00A1FF] text-white border-2 border-black font-black text-[9px] uppercase hover:bg-blue-400"
+                      >EDIT</button>
                       <button
                         onClick={() => handleDeleteProject(project.id)}
-                        className="w-8 h-8 bg-red-500 text-white border-2 border-black font-black hover:bg-red-600 shadow-[2px_2px_0px_#000]"
-                      >
-                        ×
-                      </button>
+                        className="w-5 h-5 bg-red-500 text-white border-2 border-black font-black text-xs hover:bg-red-600 flex items-center justify-center"
+                      >×</button>
                     </div>
                   </div>
                 </div>
