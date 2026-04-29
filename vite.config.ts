@@ -31,14 +31,13 @@ export default defineConfig(({ mode }) => {
             // don't block the initial paint on mobile networks.
             manualChunks: (id) => {
               if (!id.includes('node_modules')) return undefined;
-              if (id.includes('recharts') || id.includes('d3-')) return 'vendor-charts';
+              // These are lazy-loaded or route-specific; safe to isolate.
               if (id.includes('@google/genai')) return 'vendor-genai';
               if (id.includes('@emailjs')) return 'vendor-email';
               if (id.includes('@libsql')) return 'vendor-db';
-              // Keep react, react-dom, react-router, and scheduler together to avoid
-              // chunk initialization order issues with React 19 Activity API.
-              if (id.includes('react-router') || id.includes('react-dom') || id.includes('react/') || id.includes('scheduler')) return 'vendor-react';
-              return 'vendor';
+              // Let Rollup co-locate everything else (react, recharts, d3,
+              // react-router, redux, etc.) to avoid circular chunk deps.
+              return undefined;
             },
           },
         },
