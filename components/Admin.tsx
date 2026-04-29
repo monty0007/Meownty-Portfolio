@@ -1,7 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { getPosts, createPost, deletePost, updatePost, invalidateBlogCache, getPostById, BlogPost } from '../services/blogService';
-import { getAchievements, addAchievement, deleteAchievement } from '../services/dataService';
+import {
+  getAchievements,
+  createAchievement,
+  updateAchievement as updateAchievementDb,
+  deleteAchievement as deleteAchievementDb,
+  saveAchievementOrder,
+} from '../services/achievementService';
 import { getProjects, createProject, updateProject, deleteProject, saveProjectOrder } from '../services/projectService';
 import { Achievement, Project } from '../types';
 import Toast from './Toast';
@@ -115,9 +121,14 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
 
   useEffect(() => {
     refreshData();
-    setAchievements(getAchievements());
+    refreshAchievements();
     refreshProjects();
   }, []);
+
+  const refreshAchievements = async () => {
+    const data = await getAchievements();
+    setAchievements(data);
+  };
 
   const refreshProjects = async () => {
     const data = await getProjects();
@@ -400,26 +411,29 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     setDeleteTargetId(null);
   };
 
-  const handleSaveAch = () => {
+  const handleSaveAch = async () => {
     if (!newAch.title || !newAch.issuer) {
       showFeedback("Fill all fields to forge this badge! 🛑", "error");
       return;
     }
 
     if (editingAchId !== null) {
-      // Update existing achievement
-      const updatedAchievements = achievements.map(a =>
-        a.id === editingAchId ? { ...newAch, id: editingAchId } : a
-      );
-      setAchievements(updatedAchievements);
-      localStorage.setItem('Manish_portfolio_achievements_v2', JSON.stringify(updatedAchievements));
+      const result = await updateAchievementDb(editingAchId, newAch);
+      if (!result.success) {
+        showFeedback(result.message || 'Update failed! 🛑', 'error');
+        return;
+      }
+      await refreshAchievements();
       setEditingAchId(null);
       setNewAch({ title: '', issuer: '', date: '2024', icon: '🏆', color: '#FFD600' });
       showFeedback("BADGE UPDATED! ✏️✨");
     } else {
-      // Create new achievement
-      const ach: Achievement = { ...newAch, id: Date.now().toString() };
-      setAchievements(addAchievement(ach));
+      const result = await createAchievement(newAch);
+      if (!result.success) {
+        showFeedback(result.message || 'Create failed! 🛑', 'error');
+        return;
+      }
+      await refreshAchievements();
       setNewAch({ title: '', issuer: '', date: '2024', icon: '🏆', color: '#FFD600' });
       showFeedback("NEW BADGE FORGED! 🏆✨");
     }
@@ -448,16 +462,21 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     setShowDeleteAchModal(true);
   };
 
-  const confirmDeleteAch = () => {
+  const confirmDeleteAch = async () => {
     if (deleteAchTargetId) {
-      setAchievements(deleteAchievement(deleteAchTargetId));
-      showFeedback("BADGE DELETED! 🗑️");
+      const ok = await deleteAchievementDb(deleteAchTargetId);
+      if (ok) {
+        await refreshAchievements();
+        showFeedback("BADGE DELETED! 🗑️");
+      } else {
+        showFeedback("DELETE FAILED! 🛑", "error");
+      }
     }
     setShowDeleteAchModal(false);
     setDeleteAchTargetId(null);
   };
 
-  const moveBadge = (index: number, direction: 'up' | 'down') => {
+  const moveBadge = async (index: number, direction: 'up' | 'down') => {
     const newIndex = direction === 'up' ? index - 1 : index + 1;
     if (newIndex < 0 || newIndex >= achievements.length) return;
 
@@ -467,13 +486,13 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     updated[newIndex] = temp;
 
     setAchievements(updated);
-    localStorage.setItem('Manish_portfolio_achievements_v2', JSON.stringify(updated));
+    await saveAchievementOrder(updated.map(a => a.id));
     showFeedback(direction === 'up' ? "Badge moved up! ⬆️" : "Badge moved down! ⬇️");
   };
 
   const dragBadgeIndexRef = useRef<number | null>(null);
 
-  const handleBadgeDrop = (dropIndex: number) => {
+  const handleBadgeDrop = async (dropIndex: number) => {
     const dragIndex = dragBadgeIndexRef.current;
     if (dragIndex === null || dragIndex === dropIndex) return;
     const updated = [...achievements];
@@ -481,7 +500,7 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     updated.splice(dropIndex, 0, dragged);
     dragBadgeIndexRef.current = null;
     setAchievements(updated);
-    localStorage.setItem('Manish_portfolio_achievements_v2', JSON.stringify(updated));
+    await saveAchievementOrder(updated.map(a => a.id));
     showFeedback('Badge order saved! ✅');
   };
   // --- PROJECT HANDLERS ---

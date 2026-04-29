@@ -8,11 +8,16 @@ interface NavbarProps {
 }
 
 const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentView }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
   const [isDark, setIsDark] = useState(() => localStorage.getItem('portfolio_hero_dark') !== 'false');
-  const navigate = useNavigate();
-  const location = useLocation();
+  // True once the user has scrolled past the Hero — forces an opaque dark
+  // navbar so white text stays readable over cream / white section backgrounds.
+  // On non-home routes there is no Hero, so it's always "past" the hero.
+  const [pastHero, setPastHero] = useState(() => location.pathname !== '/');
 
   useEffect(() => {
     const handler = () => setIsDark(localStorage.getItem('portfolio_hero_dark') !== 'false');
@@ -20,10 +25,23 @@ const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentView }) => {
     return () => window.removeEventListener('portfolioThemeChange', handler);
   }, []);
 
+  // When the route changes, immediately sync pastHero:
+  // non-home pages have no Hero so they always need the opaque bar.
+  // The home page starts at the top (over the Hero) so reset to false.
+  useEffect(() => {
+    setPastHero(location.pathname !== '/');
+  }, [location.pathname]);
+
   useEffect(() => {
     let ticking = false;
     const compute = () => {
       const currentScrollY = window.scrollY;
+
+      // Once past ~80 % of the Hero height, the navbar floats over light
+      // sections — lock it to an opaque dark style so text stays readable.
+      const heroEl = document.querySelector('section') as HTMLElement | null;
+      const heroHeight = heroEl ? heroEl.offsetHeight : window.innerHeight;
+      setPastHero(currentScrollY > heroHeight * 0.8);
 
       // Hide navbar if inside #projects section
       const projectsSection = document.getElementById('projects');
@@ -72,7 +90,13 @@ const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentView }) => {
 
   return (
     <nav className={`fixed top-4 sm:top-6 left-1/2 z-[110] w-[95%] sm:w-[90%] max-w-5xl transition-all duration-500 ease-in-out ${isVisible ? 'nav-visible' : 'nav-hidden'}`}>
-      <div className={`backdrop-blur-md border-[3px] sm:border-[4px] shadow-[4px_4px_0px_rgba(0,0,0,0.3)] sm:shadow-[8px_8px_0px_rgba(0,0,0,0.3)] px-3 sm:px-8 py-3 sm:py-4 flex items-center justify-between ${isDark ? 'bg-white/10 border-white/30' : 'bg-black/80 border-black/60'}`}>
+      <div className={`backdrop-blur-md border-[3px] sm:border-[4px] shadow-[4px_4px_0px_rgba(0,0,0,0.3)] sm:shadow-[8px_8px_0px_rgba(0,0,0,0.3)] px-3 sm:px-8 py-3 sm:py-4 flex items-center justify-between ${
+        // When over the dark Hero stay translucent; everywhere else (light
+        // section backgrounds) use the opaque dark bar so text stays visible.
+        !pastHero && isDark
+          ? 'bg-white/10 border-white/30'
+          : 'bg-black/90 border-black/60'
+      }`}>
         <div
           className="text-2xl font-black tracking-tighter flex items-center gap-2 sm:gap-3 cursor-pointer group"
           onClick={() => {
