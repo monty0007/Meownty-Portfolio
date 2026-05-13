@@ -10,6 +10,8 @@ on:
 jobs:
   backup:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout source repo
         uses: actions/checkout@v4
@@ -23,11 +25,21 @@ jobs:
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
 
+      - name: Ensure backup branch exists
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api repos/${{ github.repository }}/git/refs/heads/backup \
+            --silent 2>/dev/null || \
+          gh api repos/${{ github.repository }}/git/refs \
+            -f ref="refs/heads/backup" \
+            -f sha="$(gh api repos/${{ github.repository }}/git/refs/heads/${{ github.ref_name }} --jq '.object.sha')"
+
       - name: Run backup
         env:
           VITE_TURSO_DATABASE_URL: ${{ secrets.VITE_TURSO_DATABASE_URL }}
           VITE_TURSO_AUTH_TOKEN: ${{ secrets.VITE_TURSO_AUTH_TOKEN }}
-          BACKUP_GH_TOKEN: ${{ secrets.BACKUP_GH_TOKEN }}
-          BACKUP_REPO: ${{ secrets.BACKUP_REPO }}
-          BACKUP_BRANCH: ${{ secrets.BACKUP_BRANCH || 'main' }}
+          BACKUP_GH_TOKEN: ${{ github.token }}
+          BACKUP_REPO: ${{ github.repository }}
+          BACKUP_BRANCH: backup
         run: node scripts/backup-to-github.cjs
