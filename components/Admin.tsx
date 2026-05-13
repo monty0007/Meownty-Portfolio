@@ -58,13 +58,13 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const lastCursorPositionRef = useRef<{ start: number; end: number } | null>(null);
   const projectFormRef = useRef<HTMLDivElement>(null);
 
-  // Process an image file, converting HEIC if needed, returns a base64 data URL at original quality
-  const resizeImage = async (file: File, _maxWidth?: number, _maxHeight?: number, _quality?: number): Promise<{ dataUrl: string; resized: boolean }> => {
+  // Process an image file: converts HEIC, resizes to sensible max for DB storage, preserves quality
+  const resizeImage = async (file: File, maxWidth = 1920, maxHeight = 1080, quality = 0.92): Promise<{ dataUrl: string; resized: boolean }> => {
     // Convert HEIC/HEIF to JPEG first
     let processedFile: File = file;
     const isHeic = file.type === 'image/heic' || file.type === 'image/heif' || /\.heic$/i.test(file.name) || /\.heif$/i.test(file.name);
     if (isHeic) {
-      const blob = await heic2any({ blob: file, toType: 'image/jpeg', quality: 1 }) as Blob;
+      const blob = await heic2any({ blob: file, toType: 'image/jpeg', quality }) as Blob;
       processedFile = new File([blob], file.name.replace(/\.heic$/i, '.jpg').replace(/\.heif$/i, '.jpg'), { type: 'image/jpeg' });
     }
 
@@ -72,7 +72,29 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       const reader = new FileReader();
       reader.onerror = () => reject(new Error('Failed to read file'));
       reader.onloadend = () => {
-        resolve({ dataUrl: reader.result as string, resized: isHeic });
+        const img = new Image();
+        img.onerror = () => reject(new Error('Failed to decode image'));
+        img.onload = () => {
+          let { width, height } = img;
+          const needsResize = width > maxWidth || height > maxHeight;
+          if (needsResize) {
+            const ratio = Math.min(maxWidth / width, maxHeight / height);
+            width = Math.round(width * ratio);
+            height = Math.round(height * ratio);
+          }
+          // Only re-encode through canvas if resizing is needed or it was HEIC
+          if (!needsResize && !isHeic) {
+            resolve({ dataUrl: reader.result as string, resized: false });
+            return;
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d')!;
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve({ dataUrl: canvas.toDataURL('image/jpeg', quality), resized: needsResize || isHeic });
+        };
+        img.src = reader.result as string;
       };
       reader.readAsDataURL(processedFile);
     });

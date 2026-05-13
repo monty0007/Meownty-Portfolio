@@ -53,19 +53,6 @@ const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentView }) => {
       const heroHeight = heroEl ? heroEl.offsetHeight : window.innerHeight;
       setPastHero(currentScrollY > heroHeight * 0.8);
 
-      // Hide navbar if inside #projects section
-      const projectsSection = document.getElementById('projects');
-      if (projectsSection) {
-        const rect = projectsSection.getBoundingClientRect();
-        const isInsideProjects = rect.top < window.innerHeight * 0.3 && rect.bottom > window.innerHeight * 0.3;
-        if (isInsideProjects) {
-          setIsVisible(false);
-          setLastScrollY(currentScrollY);
-          ticking = false;
-          return;
-        }
-      }
-
       if (currentScrollY > lastScrollY && currentScrollY > 100) {
         setIsVisible(false);
       } else {

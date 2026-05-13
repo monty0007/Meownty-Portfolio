@@ -26,7 +26,11 @@ export const getProjects = async (): Promise<Project[]> => {
     if (isMock) return PROJECTS;
     if (projectsCache) return projectsCache;
     try {
-        const result = await db.execute('SELECT * FROM projects ORDER BY sort_order ASC, id ASC');
+        // Fetch only the lightweight columns — image_url stores large base64
+        // data so we load it separately only when the <img> element requests it.
+        const result = await db.execute(
+            'SELECT id, title, description, image_url, tags, color, live_link, github_link, disabled, sort_order FROM projects ORDER BY sort_order ASC, id ASC'
+        );
         if (result.rows.length === 0) return PROJECTS;
 
         projectsCache = result.rows.map((row: any) => ({
