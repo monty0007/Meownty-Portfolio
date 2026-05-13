@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { getPosts, getPostBySlug, BlogPost } from '../services/blogService';
 import { BlogSection } from '../types';
+import { BlogCardSkeleton } from './Skeleton';
 
 const SectionRenderer: React.FC<{ section: BlogSection }> = ({ section }) => {
   switch (section.type) {
@@ -321,18 +322,7 @@ const Blog: React.FC = () => {
       <div className="max-w-7xl mx-auto px-6 pt-8 pb-20">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {loading ? (
-            // Loading Skeleton
-            [...Array(6)].map((_, i) => (
-              <div key={i} className="bg-white border-[6px] border-black shadow-[10px_10px_0px_#000] overflow-hidden animate-pulse">
-                <div className="h-3 bg-gray-200" />
-                <div className="p-8">
-                  <div className="h-5 bg-gray-200 rounded w-1/3 mb-4"></div>
-                  <div className="h-8 bg-gray-200 rounded w-full mb-3"></div>
-                  <div className="h-4 bg-gray-200 rounded w-2/3 mb-2"></div>
-                  <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                </div>
-              </div>
-            ))
+            [...Array(6)].map((_, i) => <BlogCardSkeleton key={i} />)
           ) : filteredBlogs.length > 0 ? filteredBlogs.map((post) => {
             // Estimate reading time
             const wordCount = (post.excerpt || '').split(' ').length + (post.sections?.reduce((acc: number, s: any) => acc + (s.content?.split(' ')?.length || 0), 0) || 0);

@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { getProjects } from '../services/projectService';
 import { Project } from '../types';
+import { PROJECTS } from '../constants';
+import { ProjectCardSkeleton } from './Skeleton';
 
 const GithubIcon = () => (
   <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor">
@@ -27,31 +29,34 @@ const ProjectModal: React.FC<{ project: Project; index: number; onClose: () => v
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', handler);
     document.body.style.overflow = 'hidden';
+    window.dispatchEvent(new CustomEvent('projectModalChange', { detail: { open: true } }));
     return () => {
       window.removeEventListener('keydown', handler);
       document.body.style.overflow = '';
+      window.dispatchEvent(new CustomEvent('projectModalChange', { detail: { open: false } }));
     };
   }, [onClose]);
 
   return (
     <div
       ref={overlayRef}
-      className="fixed inset-0 z-[999] flex items-center justify-center p-4 md:p-8 backdrop-blur-sm"
-      style={{ backgroundColor: 'rgba(0,0,0,0.55)' }}
+      className="fixed inset-0 z-[999] flex items-center justify-center p-3 md:p-6 backdrop-blur-md"
+      style={{ backgroundColor: 'rgba(0,0,0,0.65)' }}
       onClick={(e) => { if (e.target === overlayRef.current) onClose(); }}
     >
-      <div className="relative bg-[#FFF9E6] border-[6px] border-black shadow-[12px_12px_0px_#000] w-full max-w-7xl min-h-[60vh] max-h-[85vh] overflow-y-auto flex flex-col md:flex-row">
+      <div className="relative bg-[#FFF9E6] border-[5px] border-black shadow-[10px_10px_0px_#000] w-full max-w-5xl max-h-[92vh] overflow-y-auto flex flex-col">
 
         {/* Close button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 z-10 bg-black text-white w-10 h-10 flex items-center justify-center font-black text-xl border-[3px] border-black hover:bg-[#FFD600] hover:text-black transition-colors shadow-[3px_3px_0px_#FFD600] hover:shadow-none"
+          className="absolute top-3 right-3 z-20 bg-black text-white w-9 h-9 flex items-center justify-center font-black text-lg border-[3px] border-black hover:bg-[#FFD600] hover:text-black transition-colors shadow-[3px_3px_0px_#FFD600] hover:shadow-none"
         >
           ✕
         </button>
 
-        {/* Left — Image */}
-        <div className="md:w-[45%] flex-shrink-0 border-b-[6px] md:border-b-0 md:border-r-[6px] border-black relative">
+        {/* Top — Hero Image (full width, uncropped) */}
+        <div className="relative w-full bg-gray-950 border-b-[5px] border-black">
+          {/* Project number badge */}
           <div
             className="absolute top-0 left-0 z-10 px-4 py-1.5 font-black uppercase text-[10px] tracking-widest border-r-[4px] border-b-[4px] border-black"
             style={{ backgroundColor: project.color }}
@@ -65,20 +70,19 @@ const ProjectModal: React.FC<{ project: Project; index: number; onClose: () => v
               alt={project.title}
               loading="lazy"
               decoding="async"
-              className="w-full h-80 md:h-full object-cover"
-              style={{ minHeight: '420px' }}
+              className="w-full h-auto max-h-[55vh] object-contain mx-auto block"
             />
           ) : (
             <div
-              className="w-full h-80 md:h-full flex items-center justify-center text-9xl font-black opacity-20"
-              style={{ backgroundColor: project.color + '33', minHeight: '420px' }}
+              className="w-full h-64 flex items-center justify-center text-8xl font-black opacity-20"
+              style={{ backgroundColor: project.color + '33' }}
             >
               ?
             </div>
           )}
 
           {project.disabled && (
-            <div className="absolute bottom-4 left-4">
+            <div className="absolute bottom-3 left-3">
               <span className="bg-[#FFD600] text-black px-3 py-1 font-black uppercase text-[10px] border-2 border-black shadow-[2px_2px_0px_#000]">
                 Enterprise Only ⭐
               </span>
@@ -86,78 +90,82 @@ const ProjectModal: React.FC<{ project: Project; index: number; onClose: () => v
           )}
         </div>
 
-        {/* Right — Details */}
-        <div className="flex-1 p-8 md:p-12 flex flex-col gap-6">
-          {/* Title */}
-          <div>
-            <div className="inline-block bg-black text-[#FFD600] px-3 py-0.5 font-black uppercase text-[10px] tracking-widest mb-3 border-2 border-black">
-              Project Overview
+        {/* Bottom — Details */}
+        <div className="p-6 md:p-10 flex flex-col gap-5">
+          {/* Title row */}
+          <div className="flex flex-col md:flex-row md:items-end gap-3 md:gap-6">
+            <div className="flex-1 min-w-0">
+              <div className="inline-block bg-black text-[#FFD600] px-3 py-0.5 font-black uppercase text-[10px] tracking-widest mb-2 border-2 border-black">
+                Project Overview
+              </div>
+              <h2 className="text-4xl md:text-6xl font-black uppercase tracking-tighter leading-none text-black">
+                {project.title}
+              </h2>
             </div>
-            <h2 className="text-5xl md:text-7xl font-black uppercase tracking-tighter leading-none text-black">
-              {project.title}
-            </h2>
           </div>
 
           {/* Description */}
-          <div className="bg-white border-[3px] border-dashed border-black/30 p-5 relative">
+          <div className="bg-white border-[3px] border-dashed border-black/30 p-4 md:p-5 relative">
             <div
               className="absolute -top-3 -left-1 px-2 py-0.5 font-black uppercase text-[9px] tracking-widest border-2 border-black text-black"
               style={{ backgroundColor: project.color }}
             >
               About
             </div>
-            <p className="font-bold text-gray-800 leading-relaxed text-base md:text-xl mt-1">
+            <p className="font-bold text-gray-800 leading-relaxed text-sm md:text-lg mt-1">
               {project.description}
             </p>
           </div>
 
-          {/* Tags */}
-          {project.tags.length > 0 && (
-            <div>
-              <p className="font-black uppercase text-[10px] tracking-widest text-gray-500 mb-2">Tech Stack</p>
-              <div className="flex flex-wrap gap-2">
-                {project.tags.map(tag => (
-                  <span
-                    key={tag}
-                    className="px-3 py-1.5 text-sm font-black uppercase tracking-tight border-[2px] border-black shadow-[2px_2px_0px_#000]"
-                    style={{ backgroundColor: project.color + '33', color: '#000' }}
-                  >
-                    {tag}
-                  </span>
-                ))}
+          {/* Tags + Actions row */}
+          <div className="flex flex-col md:flex-row md:items-end gap-5">
+            {/* Tags */}
+            {project.tags.length > 0 && (
+              <div className="flex-1 min-w-0">
+                <p className="font-black uppercase text-[10px] tracking-widest text-gray-500 mb-2">Tech Stack</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {project.tags.map(tag => (
+                    <span
+                      key={tag}
+                      className="px-2.5 py-1 text-xs font-black uppercase tracking-tight border-[2px] border-black shadow-[2px_2px_0px_#000]"
+                      style={{ backgroundColor: project.color + '33', color: '#000' }}
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Action buttons */}
-          <div className="flex gap-4 mt-auto pt-2">
-            {hasLive ? (
-              <a
-                href={project.link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 flex items-center justify-center gap-2 bg-black text-white border-[3px] border-black py-3 font-black uppercase text-sm tracking-wide shadow-[5px_5px_0px_#FFD600] hover:bg-[#FFD600] hover:text-black hover:shadow-[2px_2px_0px_#000] transition-all active:translate-y-0.5"
-              >
-                <ExternalLinkIcon />
-                Live Demo →
-              </a>
-            ) : (
-              <div className="flex-1 flex flex-col items-center justify-center gap-1 bg-gray-200 text-gray-500 border-[3px] border-black py-3 font-black uppercase text-sm tracking-wide cursor-not-allowed">
-                <span className="flex items-center gap-2"><ExternalLinkIcon /> {project.disabled ? 'Private / Enterprise' : 'No Live Link'}</span>
-                {project.disabled && <span className="text-[9px] font-semibold opacity-70">Contact me for a walkthrough</span>}
-              </div>
-            )}
-            {hasGithub && (
-              <a
-                href={project.githubLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 bg-white text-black border-[3px] border-black px-5 py-3 font-black uppercase text-sm tracking-wide shadow-[5px_5px_0px_#000] hover:bg-black hover:text-white hover:shadow-[2px_2px_0px_#000] transition-all active:translate-y-0.5"
-              >
-                <GithubIcon />
-                GitHub
-              </a>
-            )}
+            {/* Action buttons */}
+            <div className="flex gap-3 flex-shrink-0">
+              {hasLive ? (
+                <a
+                  href={project.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 bg-black text-white border-[3px] border-black px-6 py-3 font-black uppercase text-sm tracking-wide shadow-[5px_5px_0px_#FFD600] hover:bg-[#FFD600] hover:text-black hover:shadow-[2px_2px_0px_#000] transition-all active:translate-y-0.5"
+                >
+                  <ExternalLinkIcon />
+                  Live Demo →
+                </a>
+              ) : (
+                <div className="flex flex-col items-center justify-center gap-1 bg-gray-200 text-gray-500 border-[3px] border-black px-6 py-3 font-black uppercase text-sm tracking-wide cursor-not-allowed">
+                  <span className="flex items-center gap-2"><ExternalLinkIcon /> {project.disabled ? 'Private' : 'No Link'}</span>
+                </div>
+              )}
+              {hasGithub && (
+                <a
+                  href={project.githubLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 bg-white text-black border-[3px] border-black px-5 py-3 font-black uppercase text-sm tracking-wide shadow-[5px_5px_0px_#000] hover:bg-black hover:text-white hover:shadow-[2px_2px_0px_#000] transition-all active:translate-y-0.5"
+                >
+                  <GithubIcon />
+                  GitHub
+                </a>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -214,7 +222,7 @@ const ProjectCard: React.FC<{ project: Project; index: number; onClick: () => vo
           {project.title}
         </h3>
 
-        <p className="text-sm font-semibold text-gray-700 leading-relaxed flex-1">
+        <p className="text-sm font-semibold text-gray-700 leading-relaxed flex-1 line-clamp-3">
           {project.description}
         </p>
 
@@ -275,7 +283,7 @@ const ProjectCard: React.FC<{ project: Project; index: number; onClick: () => vo
 };
 
 const ProjectsPage: React.FC = () => {
-  const [projects, setProjects] = useState<Project[]>([]);
+  const [projects, setProjects] = useState<Project[]>(PROJECTS);
   const [loading, setLoading] = useState(true);
   const [selectedProject, setSelectedProject] = useState<{ project: Project; index: number } | null>(null);
   const [isDark, setIsDark] = useState(() => localStorage.getItem('portfolio_hero_dark') !== 'false');
@@ -342,8 +350,8 @@ const ProjectsPage: React.FC = () => {
         {/* Loading skeleton */}
         {loading && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="bg-white border-[4px] border-black shadow-[8px_8px_0px_#000] h-96 animate-pulse" />
+            {[1, 2, 3, 4, 5, 6].map(i => (
+              <ProjectCardSkeleton key={i} />
             ))}
           </div>
         )}

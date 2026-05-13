@@ -11,6 +11,7 @@ import {
 import { getProjects, createProject, updateProject, deleteProject, saveProjectOrder } from '../services/projectService';
 import { Achievement, Project } from '../types';
 import Toast from './Toast';
+import heic2any from 'heic2any';
 
 const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const [tab, setTab] = useState<'blogs' | 'achievements' | 'projects'>('blogs');
@@ -19,6 +20,14 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const [editingBlogId, setEditingBlogId] = useState<number | null>(null);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [editingAchId, setEditingAchId] = useState<string | null>(null);
+
+  // Loading flags so the user gets immediate feedback while DB ops run
+  const [savingBlog, setSavingBlog] = useState(false);
+  const [deletingBlog, setDeletingBlog] = useState(false);
+  const [savingAch, setSavingAch] = useState(false);
+  const [deletingAch, setDeletingAch] = useState(false);
+  const [savingProject, setSavingProject] = useState(false);
+  const [deletingProject, setDeletingProject] = useState(false);
 
   // Projects state
   const [projects, setProjects] = useState<Project[]>([]);
@@ -49,32 +58,23 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const lastCursorPositionRef = useRef<{ start: number; end: number } | null>(null);
   const projectFormRef = useRef<HTMLDivElement>(null);
 
-  // Resize an image file to fit within maxWidth x maxHeight, returns a base64 data URL
-  const resizeImage = (file: File, maxWidth: number, maxHeight: number, quality = 0.82): Promise<{ dataUrl: string; resized: boolean }> => {
+  // Process an image file, converting HEIC if needed, returns a base64 data URL at original quality
+  const resizeImage = async (file: File, _maxWidth?: number, _maxHeight?: number, _quality?: number): Promise<{ dataUrl: string; resized: boolean }> => {
+    // Convert HEIC/HEIF to JPEG first
+    let processedFile: File = file;
+    const isHeic = file.type === 'image/heic' || file.type === 'image/heif' || /\.heic$/i.test(file.name) || /\.heif$/i.test(file.name);
+    if (isHeic) {
+      const blob = await heic2any({ blob: file, toType: 'image/jpeg', quality: 1 }) as Blob;
+      processedFile = new File([blob], file.name.replace(/\.heic$/i, '.jpg').replace(/\.heif$/i, '.jpg'), { type: 'image/jpeg' });
+    }
+
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onerror = () => reject(new Error('Failed to read file'));
       reader.onloadend = () => {
-        const img = new Image();
-        img.onerror = () => reject(new Error('Failed to decode image'));
-        img.onload = () => {
-          let { width, height } = img;
-          const needsResize = width > maxWidth || height > maxHeight;
-          if (needsResize) {
-            const ratio = Math.min(maxWidth / width, maxHeight / height);
-            width = Math.round(width * ratio);
-            height = Math.round(height * ratio);
-          }
-          const canvas = document.createElement('canvas');
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d')!;
-          ctx.drawImage(img, 0, 0, width, height);
-          resolve({ dataUrl: canvas.toDataURL('image/jpeg', quality), resized: needsResize });
-        };
-        img.src = reader.result as string;
+        resolve({ dataUrl: reader.result as string, resized: isHeic });
       };
-      reader.readAsDataURL(file);
+      reader.readAsDataURL(processedFile);
     });
   };
 
@@ -250,6 +250,7 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   };
 
   const handleSaveBlog = async () => {
+    if (savingBlog) return;
     const newErrors: { [key: string]: boolean } = {};
     if (!newBlog.title.trim()) newErrors.title = true;
     if (!newBlog.sectionsJSON.trim() || newBlog.sectionsJSON.trim() === '[]') newErrors.sectionsJSON = true;
@@ -260,6 +261,7 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       return;
     }
 
+    setSavingBlog(true);
     try {
       // Parse JSON to sections
       let parsedSections;
@@ -327,6 +329,8 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     } catch (e) {
       setErrors({ sectionsJSON: true });
       showFeedback("JSON CRASH! Check your brackets/commas! 🤖💥", "error");
+    } finally {
+      setSavingBlog(false);
     }
   };
 
@@ -397,45 +401,55 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   };
 
   const confirmDelete = async () => {
-    if (!deleteTargetId) return;
-
-    const success = await deletePost(deleteTargetId);
-    if (success) {
-      invalidateBlogCache();
-      await refreshData();
-      showFeedback("ENTRY DELETED! 🗑️");
-    } else {
-      showFeedback("DELETE FAILED! 🛑", "error");
+    if (!deleteTargetId || deletingBlog) return;
+    setDeletingBlog(true);
+    try {
+      const success = await deletePost(deleteTargetId);
+      if (success) {
+        invalidateBlogCache();
+        await refreshData();
+        showFeedback("ENTRY DELETED! 🗑️");
+      } else {
+        showFeedback("DELETE FAILED! 🛑", "error");
+      }
+    } finally {
+      setShowDeleteModal(false);
+      setDeleteTargetId(null);
+      setDeletingBlog(false);
     }
-    setShowDeleteModal(false);
-    setDeleteTargetId(null);
   };
 
   const handleSaveAch = async () => {
+    if (savingAch) return;
     if (!newAch.title || !newAch.issuer) {
       showFeedback("Fill all fields to forge this badge! 🛑", "error");
       return;
     }
 
-    if (editingAchId !== null) {
-      const result = await updateAchievementDb(editingAchId, newAch);
-      if (!result.success) {
-        showFeedback(result.message || 'Update failed! 🛑', 'error');
-        return;
+    setSavingAch(true);
+    try {
+      if (editingAchId !== null) {
+        const result = await updateAchievementDb(editingAchId, newAch);
+        if (!result.success) {
+          showFeedback(result.message || 'Update failed! 🛑', 'error');
+          return;
+        }
+        await refreshAchievements();
+        setEditingAchId(null);
+        setNewAch({ title: '', issuer: '', date: '2024', icon: '🏆', color: '#FFD600' });
+        showFeedback("BADGE UPDATED! ✏️✨");
+      } else {
+        const result = await createAchievement(newAch);
+        if (!result.success) {
+          showFeedback(result.message || 'Create failed! 🛑', 'error');
+          return;
+        }
+        await refreshAchievements();
+        setNewAch({ title: '', issuer: '', date: '2024', icon: '🏆', color: '#FFD600' });
+        showFeedback("NEW BADGE FORGED! 🏆✨");
       }
-      await refreshAchievements();
-      setEditingAchId(null);
-      setNewAch({ title: '', issuer: '', date: '2024', icon: '🏆', color: '#FFD600' });
-      showFeedback("BADGE UPDATED! ✏️✨");
-    } else {
-      const result = await createAchievement(newAch);
-      if (!result.success) {
-        showFeedback(result.message || 'Create failed! 🛑', 'error');
-        return;
-      }
-      await refreshAchievements();
-      setNewAch({ title: '', issuer: '', date: '2024', icon: '🏆', color: '#FFD600' });
-      showFeedback("NEW BADGE FORGED! 🏆✨");
+    } finally {
+      setSavingAch(false);
     }
   };
 
@@ -463,7 +477,9 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   };
 
   const confirmDeleteAch = async () => {
-    if (deleteAchTargetId) {
+    if (!deleteAchTargetId || deletingAch) return;
+    setDeletingAch(true);
+    try {
       const ok = await deleteAchievementDb(deleteAchTargetId);
       if (ok) {
         await refreshAchievements();
@@ -471,9 +487,11 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       } else {
         showFeedback("DELETE FAILED! 🛑", "error");
       }
+    } finally {
+      setShowDeleteAchModal(false);
+      setDeleteAchTargetId(null);
+      setDeletingAch(false);
     }
-    setShowDeleteAchModal(false);
-    setDeleteAchTargetId(null);
   };
 
   const moveBadge = async (index: number, direction: 'up' | 'down') => {
@@ -505,6 +523,7 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   };
   // --- PROJECT HANDLERS ---
   const handleSaveProject = async () => {
+    if (savingProject) return;
     if (!newProject.title.trim()) {
       showFeedback('Project title is required! 🛑', 'error');
       return;
@@ -519,19 +538,24 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       githubLink: newProject.githubLink.trim(),
       disabled: newProject.disabled,
     };
-    let result;
-    if (editingProjectId !== null) {
-      result = await updateProject(editingProjectId, projectData);
-    } else {
-      result = await createProject(projectData);
-    }
-    if (result.success) {
-      await refreshProjects();
-      setNewProject(getDefaultProjectState());
-      setEditingProjectId(null);
-      showFeedback(editingProjectId !== null ? 'PROJECT UPDATED! ✏️✨' : 'PROJECT LAUNCHED! 🚀✨');
-    } else {
-      showFeedback(`FAILED! ${result.message} 🛑`, 'error');
+    setSavingProject(true);
+    try {
+      let result;
+      if (editingProjectId !== null) {
+        result = await updateProject(editingProjectId, projectData);
+      } else {
+        result = await createProject(projectData);
+      }
+      if (result.success) {
+        await refreshProjects();
+        setNewProject(getDefaultProjectState());
+        setEditingProjectId(null);
+        showFeedback(editingProjectId !== null ? 'PROJECT UPDATED! ✏️✨' : 'PROJECT LAUNCHED! 🚀✨');
+      } else {
+        showFeedback(`FAILED! ${result.message} 🛑`, 'error');
+      }
+    } finally {
+      setSavingProject(false);
     }
   };
 
@@ -560,16 +584,21 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   };
 
   const confirmDeleteProject = async () => {
-    if (!deleteProjectTargetId) return;
-    const success = await deleteProject(deleteProjectTargetId);
-    if (success) {
-      await refreshProjects();
-      showFeedback('PROJECT DELETED! 🗑️');
-    } else {
-      showFeedback('DELETE FAILED! 🛑', 'error');
+    if (!deleteProjectTargetId || deletingProject) return;
+    setDeletingProject(true);
+    try {
+      const success = await deleteProject(deleteProjectTargetId);
+      if (success) {
+        await refreshProjects();
+        showFeedback('PROJECT DELETED! 🗑️');
+      } else {
+        showFeedback('DELETE FAILED! 🛑', 'error');
+      }
+    } finally {
+      setShowDeleteProjectModal(false);
+      setDeleteProjectTargetId(null);
+      setDeletingProject(false);
     }
-    setShowDeleteProjectModal(false);
-    setDeleteProjectTargetId(null);
   };
 
   const moveProject = async (index: number, direction: 'up' | 'down') => {
@@ -627,9 +656,10 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
           </button>
           <button
             onClick={confirmDelete}
-            className="flex-1 bg-red-500 text-white border-4 border-black py-3 font-black uppercase hover:bg-red-600 shadow-[4px_4px_0px_#000]"
+            disabled={deletingBlog}
+            className="flex-1 bg-red-500 text-white border-4 border-black py-3 font-black uppercase hover:bg-red-600 shadow-[4px_4px_0px_#000] disabled:opacity-60 disabled:cursor-wait"
           >
-            Delete!
+            {deletingBlog ? '⏳ DELETING…' : 'Delete!'}
           </button>
         </div>
       </div>
@@ -652,9 +682,10 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
           </button>
           <button
             onClick={confirmDeleteAch}
-            className="flex-1 bg-red-500 text-white border-4 border-black py-3 font-black uppercase hover:bg-red-600 shadow-[4px_4px_0px_#000]"
+            disabled={deletingAch}
+            className="flex-1 bg-red-500 text-white border-4 border-black py-3 font-black uppercase hover:bg-red-600 shadow-[4px_4px_0px_#000] disabled:opacity-60 disabled:cursor-wait"
           >
-            Delete!
+            {deletingAch ? '⏳ DELETING…' : 'Delete!'}
           </button>
         </div>
       </div>
@@ -677,9 +708,10 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
           </button>
           <button
             onClick={confirmDeleteProject}
-            className="flex-1 bg-red-500 text-white border-4 border-black py-3 font-black uppercase hover:bg-red-600 shadow-[4px_4px_0px_#000]"
+            disabled={deletingProject}
+            className="flex-1 bg-red-500 text-white border-4 border-black py-3 font-black uppercase hover:bg-red-600 shadow-[4px_4px_0px_#000] disabled:opacity-60 disabled:cursor-wait"
           >
-            Delete!
+            {deletingProject ? '⏳ DELETING…' : 'Delete!'}
           </button>
         </div>
       </div>
@@ -1087,7 +1119,7 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                           <input
                             type="file"
                             multiple
-                            accept="image/*"
+                            accept="image/*,.heic,.heif"
                             className="hidden"
                             onChange={async (e) => {
                               const files = Array.from(e.target.files || []) as File[];
@@ -1099,9 +1131,9 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
 
                               try {
                                 const results = await Promise.all(
-                                  files.map(f => resizeImage(f, 900, 700, 0.82))
+                                  files.map(f => resizeImage(f))
                                 );
-                                const anyResized = results.some(r => r.resized);
+                                const anyConverted = results.some(r => r.resized);
 
                                 const ts = Date.now();
                                 const imgId1 = `IMG_${ts}_1`;
@@ -1117,11 +1149,7 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                                 } else {
                                   smartInsert(`{\n  "type": "image-grid",\n  "content": "{{${imgId1}}}",\n  "content2": "{{${imgId2}}}",\n  "caption": "Uploaded Grid"\n}`, true);
                                 }
-                                if (anyResized) {
-                                  showFeedback('Images uploaded & resized to fit! 🖼️✅');
-                                } else {
-                                  showFeedback('Images uploaded! 🖼️✅');
-                                }
+                                showFeedback(anyConverted ? 'HEIC converted & uploaded! 🖼️✅' : 'Images uploaded! 🖼️✅');
                               } catch {
                                 showFeedback('Failed to process images! 🛑', 'error');
                               }
@@ -1150,8 +1178,14 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                     />
                   </div>
 
-                  <button onClick={handleSaveBlog} className="cartoon-btn w-full bg-[#FFD600] text-black py-5 font-black uppercase text-2xl shadow-[10px_10px_0px_#000]">
-                    {editingBlogId !== null ? '💾 UPDATE BLOG' : '🚀 BROADCAST TO LOGS'}
+                  <button
+                    onClick={handleSaveBlog}
+                    disabled={savingBlog}
+                    className="cartoon-btn w-full bg-[#FFD600] text-black py-5 font-black uppercase text-2xl shadow-[10px_10px_0px_#000] disabled:opacity-60 disabled:cursor-wait"
+                  >
+                    {savingBlog
+                      ? (editingBlogId !== null ? '⏳ UPDATING…' : '⏳ BROADCASTING…')
+                      : (editingBlogId !== null ? '💾 UPDATE BLOG' : '🚀 BROADCAST TO LOGS')}
                   </button>
                 </div>
               </div>
@@ -1170,17 +1204,17 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                       <div className="flex gap-2 flex-shrink-0">
                         <button
                           onClick={() => handleEditBlog(blog)}
-                          className="px-3 py-1 bg-[#00A1FF] text-white border-2 border-black font-black text-xs uppercase hover:bg-blue-400 shadow-[2px_2px_0px_#000] transition-all hover:shadow-[1px_1px_0px_#000] hover:translate-x-[1px] hover:translate-y-[1px]"
+                          className="px-5 py-2 bg-[#00A1FF] text-white border-2 border-black font-black text-sm uppercase hover:bg-blue-400 shadow-[3px_3px_0px_#000] transition-all hover:shadow-[1px_1px_0px_#000] hover:translate-x-[1px] hover:translate-y-[1px] cursor-pointer"
                           title="Edit blog"
                         >
-                          EDIT
+                          ✏️ EDIT
                         </button>
                         <button
                           onClick={() => handleDeleteBlog(blog.id)}
-                          className="w-8 h-8 bg-red-500 text-white border-2 border-black font-black hover:bg-red-600 shadow-[2px_2px_0px_#000] transition-all hover:shadow-[1px_1px_0px_#000] hover:translate-x-[1px] hover:translate-y-[1px]"
+                          className="px-4 py-2 bg-red-500 text-white border-2 border-black font-black text-sm uppercase hover:bg-red-600 shadow-[3px_3px_0px_#000] transition-all hover:shadow-[1px_1px_0px_#000] hover:translate-x-[1px] hover:translate-y-[1px] cursor-pointer"
                           title="Delete blog"
                         >
-                          ×
+                          🗑️ DEL
                         </button>
                       </div>
                     </div>
@@ -1225,8 +1259,14 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                       <option value="#FF4B4B">Red</option>
                     </select>
                   </div>
-                  <button onClick={handleSaveAch} className="cartoon-btn w-full bg-[#6B4BFF] text-white py-4 font-black uppercase text-xl shadow-[8px_8px_0px_#000]">
-                    {editingAchId !== null ? '💾 UPDATE BADGE' : 'FORGE BADGE'}
+                  <button
+                    onClick={handleSaveAch}
+                    disabled={savingAch}
+                    className="cartoon-btn w-full bg-[#6B4BFF] text-white py-4 font-black uppercase text-xl shadow-[8px_8px_0px_#000] disabled:opacity-60 disabled:cursor-wait"
+                  >
+                    {savingAch
+                      ? (editingAchId !== null ? '⏳ UPDATING…' : '⏳ FORGING…')
+                      : (editingAchId !== null ? '💾 UPDATE BADGE' : 'FORGE BADGE')}
                   </button>
                 </div>
               </div>
@@ -1267,12 +1307,12 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                       <div className="flex gap-1">
                         <button
                           onClick={() => handleEditAch(ach)}
-                          className="flex-1 px-1 py-0.5 bg-[#00A1FF] text-white border-2 border-black font-black text-[9px] uppercase hover:bg-blue-400"
-                        >EDIT</button>
+                          className="flex-1 px-2 py-1.5 bg-[#00A1FF] text-white border-2 border-black font-black text-xs uppercase hover:bg-blue-400 shadow-[2px_2px_0px_#000] cursor-pointer"
+                        >✏️ EDIT</button>
                         <button
                           onClick={() => handleDeleteAch(ach.id)}
-                          className="w-5 h-5 bg-red-500 text-white border-2 border-black font-black text-xs hover:bg-red-600 flex items-center justify-center"
-                        >×</button>
+                          className="px-2 py-1.5 bg-red-500 text-white border-2 border-black font-black text-xs uppercase hover:bg-red-600 shadow-[2px_2px_0px_#000] flex items-center justify-center cursor-pointer"
+                        >🗑️</button>
                       </div>
                     </div>
                   </div>
@@ -1337,19 +1377,15 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                       📁 Upload
                       <input
                         type="file"
-                        accept="image/*"
+                        accept="image/*,.heic,.heif"
                         className="hidden"
                         onChange={async (e) => {
                           const file = e.target.files?.[0];
                           if (!file) return;
                           try {
-                            const { dataUrl, resized } = await resizeImage(file, 800, 600, 0.82);
+                            const { dataUrl, resized } = await resizeImage(file);
                             setNewProject(prev => ({ ...prev, image: dataUrl }));
-                            if (resized) {
-                              showFeedback('Image uploaded & resized to fit! 🖼️✅');
-                            } else {
-                              showFeedback('Image uploaded! 🖼️✅');
-                            }
+                            showFeedback(resized ? 'HEIC converted & uploaded! 🖼️✅' : 'Image uploaded! 🖼️✅');
                           } catch {
                             showFeedback('Failed to process image! 🛑', 'error');
                           }
@@ -1426,9 +1462,12 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                 </div>
                 <button
                   onClick={handleSaveProject}
-                  className="cartoon-btn w-full bg-[#00A1FF] text-white py-5 font-black uppercase text-2xl shadow-[10px_10px_0px_#000]"
+                  disabled={savingProject}
+                  className="cartoon-btn w-full bg-[#00A1FF] text-white py-5 font-black uppercase text-2xl shadow-[10px_10px_0px_#000] disabled:opacity-60 disabled:cursor-wait"
                 >
-                  {editingProjectId !== null ? '💾 UPDATE PROJECT' : '🚀 LAUNCH PROJECT'}
+                  {savingProject
+                    ? (editingProjectId !== null ? '⏳ UPDATING…' : '⏳ LAUNCHING…')
+                    : (editingProjectId !== null ? '💾 UPDATE PROJECT' : '🚀 LAUNCH PROJECT')}
                 </button>
               </div>
             </div>
@@ -1479,12 +1518,12 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                     <div className="flex gap-1 flex-shrink-0">
                       <button
                         onClick={() => handleEditProject(project)}
-                        className="px-2 py-0.5 bg-[#00A1FF] text-white border-2 border-black font-black text-[9px] uppercase hover:bg-blue-400"
-                      >EDIT</button>
+                        className="px-2 py-1.5 bg-[#00A1FF] text-white border-2 border-black font-black text-xs uppercase hover:bg-blue-400 shadow-[2px_2px_0px_#000] cursor-pointer"
+                      >✏️ EDIT</button>
                       <button
                         onClick={() => handleDeleteProject(project.id)}
-                        className="w-5 h-5 bg-red-500 text-white border-2 border-black font-black text-xs hover:bg-red-600 flex items-center justify-center"
-                      >×</button>
+                        className="px-2 py-1.5 bg-red-500 text-white border-2 border-black font-black text-xs uppercase hover:bg-red-600 shadow-[2px_2px_0px_#000] flex items-center justify-center cursor-pointer"
+                      >🗑️</button>
                     </div>
                   </div>
                 </div>

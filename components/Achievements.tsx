@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { AchievementCardSkeleton } from './Skeleton';
 import { getAchievements } from '../services/achievementService';
 import { Achievement } from '../types';
 
@@ -24,17 +25,21 @@ const PALETTE = [
 
 const Achievements: React.FC = () => {
   const [achievements, setAchievements] = useState<Achievement[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       const data = await getAchievements();
-      if (!cancelled) setAchievements(data);
+      if (!cancelled) {
+        setAchievements(data);
+        setLoading(false);
+      }
     })();
     return () => { cancelled = true; };
   }, []);
 
-  if (!achievements.length) return null;
+  if (!loading && !achievements.length) return null;
 
   return (
     <section id="achievements" className="bg-[#FFF9E6]">
@@ -54,7 +59,9 @@ const Achievements: React.FC = () => {
       {/* Cards */}
       <div className="px-6 py-14 md:py-20">
         <div className="max-w-5xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-          {achievements.map((a, i) => {
+          {loading
+            ? [0, 1, 2].map(i => <AchievementCardSkeleton key={i} />)
+            : achievements.map((a, i) => {
             const color = PALETTE[i % PALETTE.length];
             return (
             <article

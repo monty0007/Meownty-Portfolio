@@ -36,19 +36,21 @@ export const createAchievement = async (
         return { success: false, message: 'DB not connected! Add VITE_TURSO_DATABASE_URL to .env' };
     }
     try {
-        // Shift existing rows down so the new one becomes rank 1
-        await db.execute('UPDATE achievements SET sort_order = sort_order + 1');
-        await db.execute({
-            sql: `INSERT INTO achievements (title, issuer, date, icon, color, sort_order)
-                  VALUES (?, ?, ?, ?, ?, 1)`,
-            args: [
-                achievement.title,
-                achievement.issuer || '',
-                achievement.date || '',
-                achievement.icon || '🏆',
-                achievement.color || '#FFD600',
-            ],
-        });
+        // Shift existing rows + insert new one in a single batched round-trip
+        await (db as any).batch([
+            { sql: 'UPDATE achievements SET sort_order = sort_order + 1', args: [] },
+            {
+                sql: `INSERT INTO achievements (title, issuer, date, icon, color, sort_order)
+                      VALUES (?, ?, ?, ?, ?, 1)`,
+                args: [
+                    achievement.title,
+                    achievement.issuer || '',
+                    achievement.date || '',
+                    achievement.icon || '🏆',
+                    achievement.color || '#FFD600',
+                ],
+            },
+        ]);
         return { success: true, message: 'Achievement created successfully!' };
     } catch (error: any) {
         console.error('Failed to create achievement:', error);
@@ -99,10 +101,11 @@ export const deleteAchievement = async (id: string): Promise<boolean> => {
 
 export const saveAchievementOrder = async (orderedIds: string[]): Promise<void> => {
     if (isMock) return;
-    for (let i = 0; i < orderedIds.length; i++) {
-        await db.execute({
+    if (orderedIds.length === 0) return;
+    await (db as any).batch(
+        orderedIds.map((id, i) => ({
             sql: 'UPDATE achievements SET sort_order = ? WHERE id = ?',
-            args: [i + 1, orderedIds[i]],
-        });
-    }
+            args: [i + 1, id],
+        }))
+    );
 };

@@ -25,6 +25,16 @@ const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentView }) => {
     return () => window.removeEventListener('portfolioThemeChange', handler);
   }, []);
 
+  // Hide navbar when a project modal is open
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const open = (e as CustomEvent).detail?.open;
+      setIsVisible(!open);
+    };
+    window.addEventListener('projectModalChange', handler);
+    return () => window.removeEventListener('projectModalChange', handler);
+  }, []);
+
   // When the route changes, immediately sync pastHero:
   // non-home pages have no Hero so they always need the opaque bar.
   // The home page starts at the top (over the Hero) so reset to false.

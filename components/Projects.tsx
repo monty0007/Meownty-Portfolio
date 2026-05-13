@@ -3,6 +3,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getProjects } from '../services/projectService';
 import { Project } from '../types';
+import { PROJECTS } from '../constants';
+import { ProjectMobileCardSkeleton, ProjectDesktopCardSkeleton } from './Skeleton';
 
 const Scribble: React.FC<{ className?: string }> = ({ className }) => (
   <svg viewBox="0 0 100 20" className={`absolute fill-none stroke-current ${className}`} style={{ strokeWidth: 3, strokeLinecap: 'round' }}>
@@ -60,7 +62,7 @@ const ProjectCard: React.FC<{ project: Project; index: number }> = ({ project, i
           </h3>
           <div className="bg-yellow-50 border-2 border-dashed border-black/20 p-3 md:p-4 mb-6 md:mb-8 relative">
             <Scribble className="w-10 md:w-12 text-[#FF4B4B] -top-3 -right-1" />
-            <p className="font-bold text-gray-800 italic leading-tight text-base md:text-xl">
+            <p className="font-bold text-gray-800 italic leading-tight text-base md:text-xl line-clamp-4">
               "{project.description}"
             </p>
           </div>
@@ -114,7 +116,7 @@ const Projects: React.FC = () => {
   const sectionRef = useRef<HTMLElement>(null);
   const navigate = useNavigate();
   const [scrollProgress, setScrollProgress] = useState(0);
-  const [projects, setProjects] = useState<Project[]>([]);
+  const [projects, setProjects] = useState<Project[]>(PROJECTS);;
 
   // Detect mobile to disable heavy 3D transforms / scroll-driven layout completely.
   const [isMobile, setIsMobile] = useState(
@@ -129,7 +131,10 @@ const Projects: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    getProjects().then(setProjects);
+    getProjects().then(data => {
+      setProjects(data);
+      setLoading(false);
+    });
   }, []);
 
   useEffect(() => {
@@ -175,7 +180,9 @@ const Projects: React.FC = () => {
         </div>
 
         <div className="space-y-10 max-w-xl mx-auto">
-          {projects.slice(0, 3).map((project, index) => (
+          {loading ? (
+            [0, 1, 2].map(i => <ProjectMobileCardSkeleton key={i} />)
+          ) : projects.slice(0, 3).map((project, index) => (
             <article
               key={project.id}
               className="bg-white border-[4px] border-black shadow-[8px_8px_0px_#000] overflow-hidden"
@@ -196,7 +203,7 @@ const Projects: React.FC = () => {
                 <h3 className="text-2xl font-black uppercase leading-tight mb-3 tracking-tighter text-black">
                   {project.title}
                 </h3>
-                <p className="font-bold text-gray-800 italic text-sm mb-4 leading-snug">
+                <p className="font-bold text-gray-800 italic text-sm mb-4 leading-snug line-clamp-3">
                   "{project.description}"
                 </p>
                 <div className="flex flex-wrap gap-1.5 mb-4">
@@ -297,11 +304,13 @@ const Projects: React.FC = () => {
             opacity: Math.min(pinProgress * 3, 1),
           }}
         >
-          {projects.slice(0, 3).map((project, index) => (
+          {loading
+            ? [0, 1, 2].map(i => <ProjectDesktopCardSkeleton key={i} index={i} />)
+            : projects.slice(0, 3).map((project, index) => (
             <ProjectCard key={project.id} project={project} index={index} />
           ))}
 
-          <div className="flex-shrink-0 w-[50vw] flex items-center justify-center ml-10">
+          {!loading && <div className="flex-shrink-0 w-[50vw] flex items-center justify-center ml-10">
             <div className="bg-white border-[8px] md:border-[12px] border-black p-8 md:p-16 rotate-3 shadow-[15px_15px_0px_#FFD600] md:shadow-[30px_30px_0px_#FFD600] text-center">
               <h4 className="text-4xl md:text-8xl font-black uppercase tracking-tighter italic mb-2 md:mb-4">FIN_DATA</h4>
               <p className="font-bold text-sm md:text-2xl uppercase tracking-widest text-[#FF4B4B] mb-6 md:mb-10">Sequence Complete!</p>
@@ -312,7 +321,7 @@ const Projects: React.FC = () => {
                 View All Projects →
               </button>
             </div>
-          </div>
+          </div>}
         </div>
 
         <div className="absolute bottom-12 right-12 flex flex-col items-end gap-2 z-[70] pointer-events-none">

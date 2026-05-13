@@ -2,24 +2,34 @@ import { db, isMock } from './db';
 import { Project } from '../types';
 import { PROJECTS } from '../constants';
 
-// Persist a new ordering to the DB — DB is the single source of truth, no localStorage.
+// In-memory cache — same pattern as blogService
+let projectsCache: Project[] | null = null;
+
+export const invalidateProjectCache = () => {
+    projectsCache = null;
+};
+
+// Persist a new ordering to the DB — single batched round-trip.
 export const saveProjectOrder = async (orderedIds: string[]): Promise<void> => {
     if (isMock) return;
-    for (let i = 0; i < orderedIds.length; i++) {
-        await db.execute({
+    invalidateProjectCache();
+    if (orderedIds.length === 0) return;
+    await (db as any).batch(
+        orderedIds.map((id, i) => ({
             sql: 'UPDATE projects SET sort_order = ? WHERE id = ?',
-            args: [i + 1, orderedIds[i]],
-        });
-    }
+            args: [i + 1, id],
+        }))
+    );
 };
 
 export const getProjects = async (): Promise<Project[]> => {
     if (isMock) return PROJECTS;
+    if (projectsCache) return projectsCache;
     try {
         const result = await db.execute('SELECT * FROM projects ORDER BY sort_order ASC, id ASC');
         if (result.rows.length === 0) return PROJECTS;
 
-        return result.rows.map((row: any) => ({
+        projectsCache = result.rows.map((row: any) => ({
             id: String(row.id),
             title: row.title || '',
             description: row.description || '',
@@ -30,6 +40,7 @@ export const getProjects = async (): Promise<Project[]> => {
             githubLink: row.github_link || '',
             disabled: row.disabled === 1 || row.disabled === true,
         }));
+        return projectsCache;
     } catch (error) {
         console.error('Failed to fetch projects:', error);
         return PROJECTS;
@@ -44,22 +55,25 @@ export const createProject = async (
     }
     try {
         const tagsStr = JSON.stringify(project.tags || []);
-        // Shift all existing projects down by 1 so the new one can take rank 1
-        await db.execute('UPDATE projects SET sort_order = sort_order + 1');
-        await db.execute({
-            sql: `INSERT INTO projects (title, description, image_url, tags, color, live_link, github_link, disabled, sort_order)
-                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)`,
-            args: [
-                project.title,
-                project.description,
-                project.image || '',
-                tagsStr,
-                project.color || '#FFD600',
-                project.link || '',
-                project.githubLink || '',
-                project.disabled ? 1 : 0,
-            ],
-        });
+        // Shift existing rows + insert new one in a single batched round-trip
+        await (db as any).batch([
+            { sql: 'UPDATE projects SET sort_order = sort_order + 1', args: [] },
+            {
+                sql: `INSERT INTO projects (title, description, image_url, tags, color, live_link, github_link, disabled, sort_order)
+                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+                args: [
+                    project.title,
+                    project.description,
+                    project.image || '',
+                    tagsStr,
+                    project.color || '#FFD600',
+                    project.link || '',
+                    project.githubLink || '',
+                    project.disabled ? 1 : 0,
+                ],
+            },
+        ]);
+        invalidateProjectCache();
         return { success: true, message: 'Project created successfully!' };
     } catch (error: any) {
         console.error('Failed to create project:', error);
@@ -99,6 +113,7 @@ export const updateProject = async (
                 id,
             ],
         });
+        invalidateProjectCache();
         return { success: true, message: 'Project updated!' };
     } catch (error: any) {
         console.error('Failed to update project:', error);
@@ -109,6 +124,7 @@ export const updateProject = async (
 export const deleteProject = async (id: string): Promise<boolean> => {
     try {
         await db.execute({ sql: 'DELETE FROM projects WHERE id = ?', args: [id] });
+        invalidateProjectCache();
         return true;
     } catch (error) {
         console.error('Failed to delete project:', error);

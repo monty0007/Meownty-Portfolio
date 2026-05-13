@@ -10,7 +10,11 @@ const createDbClient = () => {
             execute: async () => {
                 console.warn("Database operation skipped: No valid connection URL.");
                 return { rows: [] };
-            }
+            },
+            batch: async () => {
+                console.warn("Database batch skipped: No valid connection URL.");
+                return [];
+            },
         };
     }
 
