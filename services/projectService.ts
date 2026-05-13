@@ -33,17 +33,19 @@ export const getProjects = async (): Promise<Project[]> => {
         );
         if (result.rows.length === 0) return PROJECTS;
 
-        projectsCache = result.rows.map((row: any) => ({
-            id: String(row.id),
-            title: row.title || '',
-            description: row.description || '',
-            image: row.image_url || '',
-            tags: (() => { try { return JSON.parse(row.tags || '[]'); } catch { return []; } })(),
-            color: row.color || '#FFD600',
-            link: row.live_link || '',
-            githubLink: row.github_link || '',
-            disabled: row.disabled === 1 || row.disabled === true,
-        }));
+        projectsCache = result.rows.map((row: any) => {
+            return {
+                id: String(row.id),
+                title: row.title || '',
+                description: row.description || '',
+                image: row.image_url || '',
+                tags: (() => { try { return JSON.parse(row.tags || '[]'); } catch { return []; } })(),
+                color: row.color || '#FFD600',
+                link: row.live_link || '',
+                githubLink: row.github_link || '',
+                disabled: row.disabled === 1 || row.disabled === true,
+            };
+        });
         return projectsCache;
     } catch (error) {
         console.error('Failed to fetch projects:', error);

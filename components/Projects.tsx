@@ -65,40 +65,56 @@ const LayoutIcon: React.FC<{ className?: string }> = ({ className = 'w-4 h-4' })
 );
 
 // ────────────────────────────────────────────────────────────────────────────
-// View Toggle (floating, fixed)
+// View Toggle (floating, fixed) — only shown when #projects is in viewport
 // ────────────────────────────────────────────────────────────────────────────
 const HomeViewToggle: React.FC<{
   view: ProjectsHomeView;
   setView: (v: ProjectsHomeView) => void;
-}> = ({ view, setView }) => (
-  <div className="fixed bottom-6 right-6 z-[80] flex flex-col items-end gap-1.5 pointer-events-none">
-    <span className="font-black uppercase text-[9px] tracking-[0.3em] bg-black text-white px-2.5 py-1 border-2 border-black pointer-events-auto">
-      Projects View
-    </span>
-    <div className="inline-flex border-[3px] border-black bg-white shadow-[4px_4px_0px_#FFD600] pointer-events-auto" role="group" aria-label="Switch projects view">
-      <button
-        type="button"
-        onClick={() => setView('cinematic')}
-        aria-pressed={view === 'cinematic'}
-        title="Cinematic horizontal scroll"
-        className={`flex items-center gap-1.5 px-3 py-2 font-black uppercase text-[10px] tracking-widest transition-colors ${view === 'cinematic' ? 'bg-black text-[#FFD600]' : 'bg-white text-black hover:bg-gray-100'}`}
-      >
-        <FilmIcon className="w-3.5 h-3.5" />
-        Cinema
-      </button>
-      <button
-        type="button"
-        onClick={() => setView('shelf')}
-        aria-pressed={view === 'shelf'}
-        title="Wide editorial shelf"
-        className={`flex items-center gap-1.5 px-3 py-2 font-black uppercase text-[10px] tracking-widest border-l-[3px] border-black transition-colors ${view === 'shelf' ? 'bg-black text-[#FFD600]' : 'bg-white text-black hover:bg-gray-100'}`}
-      >
-        <LayoutIcon className="w-3.5 h-3.5" />
-        Shelf
-      </button>
+  visible: boolean;
+}> = ({ view, setView, visible }) => {
+  const handleSetView = (v: ProjectsHomeView) => {
+    setView(v);
+    if (v === 'shelf') {
+      setTimeout(() => {
+        document.getElementById('projects')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 50);
+    }
+  };
+
+  return (
+    <div
+      className={`fixed bottom-6 left-6 z-[260] flex flex-col items-start gap-1.5 transition-all duration-300 ${
+        visible ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 translate-y-4 pointer-events-none'
+      }`}
+    >
+      <span className="font-black uppercase text-[9px] tracking-[0.3em] bg-black text-white px-2.5 py-1 border-2 border-black">
+        Projects View
+      </span>
+      <div className="inline-flex border-[3px] border-black bg-white shadow-[4px_4px_0px_#FFD600]" role="group" aria-label="Switch projects view">
+        <button
+          type="button"
+          onClick={() => handleSetView('cinematic')}
+          aria-pressed={view === 'cinematic'}
+          title="Cinematic horizontal scroll"
+          className={`flex items-center gap-1.5 px-3 py-2 font-black uppercase text-[10px] tracking-widest transition-colors ${view === 'cinematic' ? 'bg-black text-[#FFD600]' : 'bg-white text-black hover:bg-gray-100'}`}
+        >
+          <FilmIcon className="w-3.5 h-3.5" />
+          Cinema
+        </button>
+        <button
+          type="button"
+          onClick={() => handleSetView('shelf')}
+          aria-pressed={view === 'shelf'}
+          title="Wide editorial shelf"
+          className={`flex items-center gap-1.5 px-3 py-2 font-black uppercase text-[10px] tracking-widest border-l-[3px] border-black transition-colors ${view === 'shelf' ? 'bg-black text-[#FFD600]' : 'bg-white text-black hover:bg-gray-100'}`}
+        >
+          <LayoutIcon className="w-3.5 h-3.5" />
+          Shelf
+        </button>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 // ════════════════════════════════════════════════════════════════════════════
 // VIEW 1 — CINEMATIC (original horizontal-scroll experience)
@@ -368,7 +384,7 @@ const CinematicProjects: React.FC<{ projects: Project[]; loading: boolean }> = (
           )}
         </div>
 
-        <div className="absolute bottom-12 right-12 flex flex-col items-end gap-2 z-[70] pointer-events-none">
+        <div className="absolute bottom-12 left-12 flex flex-col items-start gap-2 z-[70] pointer-events-none">
           <span className="font-black uppercase text-[10px] tracking-widest bg-black text-white px-3 py-1">
             {scrollProgress < 0.2 ? 'System Ready' : scrollProgress < 0.45 ? 'Syncing...' : `Intel: ${Math.round(galleryProgress * 100)}%`}
           </span>
@@ -605,12 +621,13 @@ const ShelfProjects: React.FC<{ projects: Project[]; loading: boolean }> = ({ pr
 // ════════════════════════════════════════════════════════════════════════════
 const Projects: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>(PROJECTS);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [view, setView] = useState<ProjectsHomeView>(() => {
     if (typeof window === 'undefined') return 'cinematic';
     const stored = localStorage.getItem(HOME_VIEW_STORAGE_KEY);
     return stored === 'shelf' ? 'shelf' : 'cinematic';
   });
+  const [toggleVisible, setToggleVisible] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -624,12 +641,21 @@ const Projects: React.FC = () => {
     localStorage.setItem(HOME_VIEW_STORAGE_KEY, view);
   }, [view]);
 
+  // Show toggle only when GeminiBot broadcasts that it is hidden
+  useEffect(() => {
+    const handler = (e: Event) => {
+      setToggleVisible((e as CustomEvent<boolean>).detail);
+    };
+    window.addEventListener('geminibot-hidden', handler);
+    return () => window.removeEventListener('geminibot-hidden', handler);
+  }, []);
+
   return (
     <>
       {view === 'cinematic'
         ? <CinematicProjects projects={projects} loading={loading} />
         : <ShelfProjects projects={projects} loading={loading} />}
-      <HomeViewToggle view={view} setView={setView} />
+      <HomeViewToggle view={view} setView={setView} visible={toggleVisible} />
     </>
   );
 };

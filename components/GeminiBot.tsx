@@ -19,7 +19,7 @@ const GeminiBot: React.FC = () => {
     scrollToBottom();
   }, [chat, loading, isOpen]);
 
-  // Hide bot when inside #projects section
+  // Hide bot when inside #projects section and broadcast state to other components
   useEffect(() => {
     let ticking = false;
     const compute = () => {
@@ -28,8 +28,10 @@ const GeminiBot: React.FC = () => {
         const rect = projectsSection.getBoundingClientRect();
         const isInsideProjects = rect.top < window.innerHeight * 0.5 && rect.bottom > window.innerHeight * 0.5;
         setIsHidden(isInsideProjects);
+        window.dispatchEvent(new CustomEvent('geminibot-hidden', { detail: isInsideProjects }));
       } else {
         setIsHidden(false);
+        window.dispatchEvent(new CustomEvent('geminibot-hidden', { detail: false }));
       }
       ticking = false;
     };
@@ -42,7 +44,7 @@ const GeminiBot: React.FC = () => {
     window.addEventListener('scroll', handleScroll, { passive: true });
     compute(); // Check on mount
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [])
 
   const handleSend = async () => {
     if (!input.trim() || loading) return;

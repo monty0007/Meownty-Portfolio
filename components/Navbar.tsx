@@ -47,11 +47,14 @@ const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentView }) => {
     const compute = () => {
       const currentScrollY = window.scrollY;
 
-      // Once past ~80 % of the Hero height, the navbar floats over light
-      // sections — lock it to an opaque dark style so text stays readable.
-      const heroEl = document.querySelector('section') as HTMLElement | null;
-      const heroHeight = heroEl ? heroEl.offsetHeight : window.innerHeight;
-      setPastHero(currentScrollY > heroHeight * 0.8);
+      // Only recalculate pastHero based on scroll when on the home page.
+      // On other routes there is no Hero, so pastHero stays true (set by the
+      // location.pathname effect above) and must not be overwritten here.
+      if (location.pathname === '/') {
+        const heroEl = document.querySelector('section') as HTMLElement | null;
+        const heroHeight = heroEl ? heroEl.offsetHeight : window.innerHeight;
+        setPastHero(currentScrollY > heroHeight * 0.8);
+      }
 
       if (currentScrollY > lastScrollY && currentScrollY > 100) {
         setIsVisible(false);
@@ -70,7 +73,7 @@ const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentView }) => {
 
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [lastScrollY]);
+  }, [lastScrollY, location.pathname]);
 
   const handleLinkClick = (e: React.MouseEvent, id: string) => {
     e.preventDefault();
@@ -92,7 +95,7 @@ const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentView }) => {
         // section backgrounds) use the opaque dark bar so text stays visible.
         !pastHero && isDark
           ? 'bg-white/10 border-white/30'
-          : 'bg-black/90 border-black/60'
+          : 'bg-black/90 border-white/20'
       }`}>
         <div
           className="text-2xl font-black tracking-tighter flex items-center gap-2 sm:gap-3 cursor-pointer group"

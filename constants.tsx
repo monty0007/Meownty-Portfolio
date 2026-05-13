@@ -98,7 +98,7 @@ export const PROJECTS: Project[] = [
     title: 'BizForge',
     description: 'An end-to-end business operations suite tailored for SMBs — covers the full cycle from quotation creation and approvals to accounts payable, payment processing, and Tally push integration. Includes RBAC, admin dashboards, and financial graphs.',
     image: '/foetronlab.png',
-    tags: ['React', 'Finance', 'RBAC', 'Tally Integration', 'SMB', 'ERP'],
+    tags: ['React', 'Power Platform', 'CSS', 'Firebase Authentication', 'Entra Setup', 'Postgres'],
     color: '#2E7D32',
     link: '',
     disabled: true
