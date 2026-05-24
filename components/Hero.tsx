@@ -67,8 +67,8 @@ const Hero: React.FC = () => {
       <div className={`absolute -bottom-6 -left-6 text-[22vw] font-black ${isDark ? 'text-white/[0.07]' : 'text-black/[0.04]'} select-none pointer-events-none uppercase leading-none italic whitespace-nowrap`}>
         GENAI
       </div>
-      <div className={`absolute -top-4 -right-4 text-[16vw] font-black text-[#FFD600]/[0.06] select-none pointer-events-none uppercase leading-none italic whitespace-nowrap`}>
-        AI
+      <div className={`absolute -top-4 -right-4 text-[8vw] font-black text-[#FFD600]/[0.06] select-none pointer-events-none uppercase leading-none italic whitespace-nowrap`}>
+        Power Platform
       </div>
 
       {/* Dot grid overlay */}

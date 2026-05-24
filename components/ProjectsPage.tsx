@@ -1,8 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { getProjects } from '../services/projectService';
-import { Project } from '../types';
+import { getPowerPlatformItems } from '../services/powerPlatformService';
+import { Project, PowerPlatformItem } from '../types';
 import { PROJECTS } from '../constants';
 import { ProjectCardSkeleton } from './Skeleton';
+import { POWER_FLOWS, POWER_FLOWS_BY_TITLE } from '../data/powerFlows';
+import { PowerFlowDiagram, type PowerFlowDiagramHandle } from './PowerFlowDiagram';
+import { ServiceIcon } from './ServiceIcon';
 
 const GithubIcon = () => (
   <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor">
@@ -282,11 +286,357 @@ const ProjectCard: React.FC<{ project: Project; index: number; onClick: () => vo
   );
 };
 
+// ─── Power Platform Section ──────────────────────────────────────────────────
+const PowerPlatformCard: React.FC<{ item: PowerPlatformItem; onClick: () => void }> = ({ item, onClick }) => {
+  const firstImage = item.images?.[0];
+  const imageCount = item.images?.length ?? 0;
+  const flow = item.flow ?? POWER_FLOWS[item.id] ?? POWER_FLOWS_BY_TITLE[item.title];
+  // Unique services in this flow (preview chips on card)
+  const flowServices = flow ? Array.from(new Set(flow.steps.map(s => s.service))).slice(0, 6) : [];
+  return (
+    <div
+      onClick={onClick}
+      className="group bg-white border-[4px] border-black shadow-[8px_8px_0px_#000] hover:shadow-[4px_4px_0px_#000] hover:translate-x-[4px] hover:translate-y-[4px] transition-all duration-200 flex flex-col overflow-hidden cursor-pointer"
+    >
+      {/* Image (Power Apps screenshots) */}
+      {firstImage ? (
+        <div className="relative w-full aspect-video overflow-hidden border-b-[4px] border-black bg-gray-100">
+          <img
+            src={firstImage}
+            alt={item.title}
+            loading="lazy"
+            decoding="async"
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          />
+          <div
+            className="absolute top-0 left-0 z-10 px-3 py-1 font-black uppercase text-[10px] tracking-widest border-r-[3px] border-b-[3px] border-black"
+            style={{ backgroundColor: item.color }}
+          >
+            <span className="text-white">{item.category}</span>
+          </div>
+          {imageCount > 1 && (
+            <div className="absolute bottom-2 right-2 bg-black text-white text-[10px] font-black px-2 py-0.5 border-[2px] border-white">
+              +{imageCount - 1} more
+            </div>
+          )}
+        </div>
+      ) : flow ? (
+        // Flow preview: stacked service logos + step count
+        <div
+          className="relative w-full aspect-video overflow-hidden border-b-[4px] border-black flex items-center justify-center"
+          style={{ backgroundColor: '#F3F2F1', backgroundImage: 'repeating-linear-gradient(0deg,transparent_0,transparent_19px,#e1dfdd_20px),repeating-linear-gradient(90deg,transparent_0,transparent_19px,#e1dfdd_20px)' }}
+        >
+          <div
+            className="absolute top-0 left-0 z-10 px-3 py-1 font-black uppercase text-[10px] tracking-widest border-r-[3px] border-b-[3px] border-black"
+            style={{ backgroundColor: item.color }}
+          >
+            <span className="text-white">{item.category}</span>
+          </div>
+          <div className="flex flex-col items-center gap-2 px-4">
+            <div className="flex items-center gap-1.5 flex-wrap justify-center">
+              {flowServices.map((svc, i) => (
+                <React.Fragment key={svc}>
+                  <div className="w-9 h-9 bg-white border-[2px] border-black rounded shadow-[2px_2px_0_#000] flex items-center justify-center">
+                    <ServiceIcon service={svc} size={26} />
+                  </div>
+                  {i < flowServices.length - 1 && (
+                    <span className="text-black font-black text-xs">→</span>
+                  )}
+                </React.Fragment>
+              ))}
+            </div>
+            <div className="bg-black text-[#FFD600] px-2 py-0.5 text-[9px] font-black uppercase tracking-widest border-[2px] border-black">
+              {flow.steps.length} steps · click to explore
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div
+          className="px-4 py-3 border-b-[4px] border-black flex items-center gap-3"
+          style={{ backgroundColor: item.color + '18' }}
+        >
+          <span
+            className="px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider border-[2px] border-black shadow-[2px_2px_0px_#000]"
+            style={{ backgroundColor: item.color, color: '#FFF' }}
+          >
+            {item.category}
+          </span>
+        </div>
+      )}
+
+      {/* Content */}
+      <div className="flex flex-col flex-1 p-6 gap-4">
+        <h3 className="text-xl font-black uppercase tracking-tight leading-tight text-black">
+          {item.title}
+        </h3>
+        <p className="text-sm font-semibold text-gray-700 leading-relaxed flex-1 line-clamp-3">
+          {item.description}
+        </p>
+
+        {/* Category pill (when image is shown) */}
+        {firstImage && (
+          <span
+            className="self-start px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider border-[2px] border-black shadow-[2px_2px_0px_#000]"
+            style={{ backgroundColor: item.color, color: '#FFF' }}
+          >
+            {item.category}
+          </span>
+        )}
+
+        {/* Click hint */}
+        <div className="text-center text-[10px] font-bold uppercase tracking-widest text-gray-400 pt-1 opacity-0 group-hover:opacity-100 transition-opacity mt-auto">
+          Click to view details ↗
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─── Power Platform Detail Modal ─────────────────────────────────────────────
+const PowerPlatformModal: React.FC<{ item: PowerPlatformItem; onClose: () => void }> = ({ item, onClose }) => {
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const images = item.images ?? [];
+  const flow = item.flow ?? POWER_FLOWS[item.id] ?? POWER_FLOWS_BY_TITLE[item.title];
+  const [activeImg, setActiveImg] = useState(0);
+  const flowRef = useRef<PowerFlowDiagramHandle>(null);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+      if (images.length > 1) {
+        if (e.key === 'ArrowRight') setActiveImg(i => Math.min(i + 1, images.length - 1));
+        if (e.key === 'ArrowLeft') setActiveImg(i => Math.max(i - 1, 0));
+      }
+    };
+    window.addEventListener('keydown', handler);
+    document.body.style.overflow = 'hidden';
+    window.dispatchEvent(new CustomEvent('projectModalChange', { detail: { open: true } }));
+    return () => {
+      window.removeEventListener('keydown', handler);
+      document.body.style.overflow = '';
+      window.dispatchEvent(new CustomEvent('projectModalChange', { detail: { open: false } }));
+    };
+  }, [onClose, images.length]);
+
+  // Layout: two-column when we have a flow OR images; otherwise single column
+  const hasVisual = !!flow || images.length > 0;
+
+  return (
+    <div
+      ref={overlayRef}
+      className="fixed inset-0 z-[999] flex items-center justify-center p-3 md:p-6 backdrop-blur-md"
+      style={{ backgroundColor: 'rgba(0,0,0,0.65)' }}
+      onClick={(e) => { if (e.target === overlayRef.current) onClose(); }}
+    >
+      <div className="relative bg-[#FFF9E6] border-[5px] border-black shadow-[10px_10px_0px_#000] w-full max-w-6xl max-h-[92vh] overflow-hidden flex flex-col">
+
+        {/* Close button */}
+        <button
+          onClick={onClose}
+          className="absolute top-3 right-3 z-30 bg-black text-white w-9 h-9 flex items-center justify-center font-black text-lg border-[3px] border-black hover:bg-[#FFD600] hover:text-black transition-colors shadow-[3px_3px_0px_#FFD600] hover:shadow-none"
+        >
+          ✕
+        </button>
+
+        <div className={`flex-1 overflow-y-auto pp-hide-scrollbar ${hasVisual ? 'grid grid-cols-1 lg:grid-cols-3 gap-0' : ''}`}>
+
+          {/* ── LEFT: Flow diagram or Image gallery ── */}
+          {flow ? (
+            <div className="lg:col-span-2 bg-[#F3F2F1] border-b-[5px] lg:border-b-0 lg:border-r-[5px] border-black p-5 md:p-7 flex flex-col items-center lg:max-h-[88vh] lg:overflow-hidden">
+              <div className="flex items-center justify-between mb-3 w-full">
+                <div
+                  className="px-4 py-1.5 font-black uppercase text-sm tracking-widest border-[3px] border-black text-white shadow-[3px_3px_0_#000]"
+                  style={{ backgroundColor: item.color }}
+                >
+                  {item.category} · Flow
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="text-[10px] font-black uppercase tracking-widest text-gray-600">
+                    {flow.steps.length} steps
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => flowRef.current?.reset()}
+                    className="bg-white text-black px-2.5 py-1 text-[10px] font-black uppercase tracking-widest border-[2px] border-black shadow-[2px_2px_0px_#000] hover:bg-[#FFD600] transition-colors"
+                  >
+                    Reset
+                  </button>
+                </div>
+              </div>
+              <div className="flex-1 w-full min-h-0 flex items-center justify-center">
+                <PowerFlowDiagram ref={flowRef} flow={flow} cardWidth={320} autoFit minScale={0.45} hideResetButton />
+              </div>
+            </div>
+          ) : images.length > 0 ? (
+            <div className="lg:col-span-2 relative bg-gray-950 border-b-[5px] lg:border-b-0 lg:border-r-[5px] border-black select-none flex items-center">
+              <div
+                className="absolute top-0 left-0 z-10 px-4 py-1.5 font-black uppercase text-[10px] tracking-widest border-r-[4px] border-b-[4px] border-black text-white"
+                style={{ backgroundColor: item.color }}
+              >
+                {item.category}
+              </div>
+              <img
+                key={activeImg}
+                src={images[activeImg]}
+                alt={`${item.title} — screenshot ${activeImg + 1}`}
+                className="w-full h-auto max-h-[70vh] object-contain mx-auto block"
+              />
+              {images.length > 1 && (
+                <>
+                  <button
+                    onClick={() => setActiveImg(i => Math.max(i - 1, 0))}
+                    disabled={activeImg === 0}
+                    className="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-9 h-9 bg-black text-white flex items-center justify-center font-black border-[3px] border-white disabled:opacity-30 hover:bg-[#FFD600] hover:text-black transition-colors"
+                  >‹</button>
+                  <button
+                    onClick={() => setActiveImg(i => Math.min(i + 1, images.length - 1))}
+                    disabled={activeImg === images.length - 1}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-9 h-9 bg-black text-white flex items-center justify-center font-black border-[3px] border-white disabled:opacity-30 hover:bg-[#FFD600] hover:text-black transition-colors"
+                  >›</button>
+                  <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">
+                    {images.map((_, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setActiveImg(i)}
+                        className={`w-2 h-2 rounded-full border border-white transition-all ${i === activeImg ? 'bg-white scale-125' : 'bg-white/40'}`}
+                      />
+                    ))}
+                  </div>
+                  <div className="absolute bottom-2 right-10 text-[10px] font-black text-white/70">
+                    {activeImg + 1} / {images.length}
+                  </div>
+                </>
+              )}
+            </div>
+          ) : null}
+
+          {/* ── RIGHT: Text content ── */}
+          <div className={`${hasVisual ? 'lg:col-span-1' : ''} p-6 md:p-8 flex flex-col gap-5`}>
+            <div>
+              <div className="inline-block bg-black text-[#FFD600] px-3 py-0.5 font-black uppercase text-[10px] tracking-widest mb-2 border-2 border-black">
+                Solution Overview
+              </div>
+              <h2 className="text-2xl md:text-3xl font-black uppercase tracking-tighter leading-none text-black break-words">
+                {item.title}
+              </h2>
+            </div>
+
+            <div
+              className="self-start px-3 py-1 text-[10px] font-black uppercase tracking-wider border-[2px] border-black shadow-[3px_3px_0px_#000]"
+              style={{ backgroundColor: item.color, color: '#FFF' }}
+            >
+              {item.category}
+            </div>
+
+            <div className="bg-white border-[3px] border-dashed border-black/30 p-4 md:p-5 relative">
+              <div
+                className="absolute -top-3 -left-1 px-2 py-0.5 font-black uppercase text-[9px] tracking-widest border-2 border-black text-white"
+                style={{ backgroundColor: item.color }}
+              >
+                About
+              </div>
+              <p className="font-semibold text-gray-800 leading-relaxed text-sm md:text-base mt-1">
+                {item.description}
+              </p>
+            </div>
+
+            {flow && (
+              <div className="bg-white border-[3px] border-black p-4">
+                <div className="font-black uppercase text-[10px] tracking-widest text-black mb-2">
+                  Services used
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {Array.from(new Set(flow.steps.map(s => s.sub))).map(svc => (
+                    <span
+                      key={svc}
+                      className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide border-[2px] border-black bg-[#F3F2F1]"
+                    >
+                      {svc}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="flex gap-3 flex-wrap mt-auto">
+              {item.link && (
+                <a
+                  href={item.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 bg-black text-white border-[3px] border-black px-5 py-2.5 font-black uppercase text-sm tracking-wide shadow-[5px_5px_0px_#FFD600] hover:bg-[#FFD600] hover:text-black hover:shadow-[2px_2px_0px_#000] transition-all active:translate-y-0.5"
+                >
+                  <ExternalLinkIcon />
+                  View Live →
+                </a>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const PowerPlatformSection: React.FC<{ isDark: boolean; items: PowerPlatformItem[] }> = ({ isDark, items }) => {
+  const [activeFilter, setActiveFilter] = useState<string>('All');
+  const [selectedItem, setSelectedItem] = useState<PowerPlatformItem | null>(null);
+  const categories = ['All', 'Power Automate', 'Power Apps', 'Copilot Studio'];
+
+  const filtered = activeFilter === 'All'
+    ? items
+    : items.filter(item => item.category === activeFilter);
+
+  return (
+    <div>
+      {/* Filter Tabs */}
+      <div className="flex flex-wrap gap-2 mb-8">
+        {categories.map(cat => (
+          <button
+            key={cat}
+            onClick={() => setActiveFilter(cat)}
+            className={`px-4 py-2 font-black uppercase text-xs tracking-wide border-[3px] border-black transition-all ${
+              activeFilter === cat
+                ? 'bg-black text-[#FFD600] shadow-none translate-x-[2px] translate-y-[2px]'
+                : 'bg-white text-black shadow-[4px_4px_0px_#000] hover:shadow-[2px_2px_0px_#000] hover:translate-x-[2px] hover:translate-y-[2px]'
+            }`}
+          >
+            {cat}
+          </button>
+        ))}
+      </div>
+
+      {/* Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+        {filtered.map(item => (
+          <PowerPlatformCard key={item.id} item={item} onClick={() => setSelectedItem(item)} />
+        ))}
+      </div>
+
+      {/* Empty state */}
+      {filtered.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-20 gap-4">
+          <div className="text-6xl">⚡</div>
+          <p className="font-bold text-gray-500">No items in this category yet.</p>
+        </div>
+      )}
+
+      {/* Detail Modal */}
+      {selectedItem && (
+        <PowerPlatformModal item={selectedItem} onClose={() => setSelectedItem(null)} />
+      )}
+    </div>
+  );
+};
+
+// ─── Main Projects Page ──────────────────────────────────────────────────────
 const ProjectsPage: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>(PROJECTS);
+  const [ppItems, setPpItems] = useState<PowerPlatformItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedProject, setSelectedProject] = useState<{ project: Project; index: number } | null>(null);
   const [isDark, setIsDark] = useState(() => localStorage.getItem('portfolio_hero_dark') !== 'false');
+  const [activeTab, setActiveTab] = useState<'projects' | 'power-platform'>('projects');
 
   useEffect(() => {
     const handler = () => setIsDark(localStorage.getItem('portfolio_hero_dark') !== 'false');
@@ -295,8 +645,9 @@ const ProjectsPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    getProjects().then(data => {
-      setProjects(data);
+    Promise.all([getProjects(), getPowerPlatformItems()]).then(([projData, ppData]) => {
+      setProjects(projData);
+      setPpItems(ppData);
       setLoading(false);
     });
   }, []);
@@ -335,12 +686,47 @@ const ProjectsPage: React.FC = () => {
               <div className="flex items-center gap-3 mt-3">
                 <div className="h-[4px] w-16 bg-[#FFD600] border border-black" />
                 <p className={`font-bold ${isDark ? 'text-white/50' : 'text-black/50'} text-sm`}>
-                  {projects.length} project{projects.length !== 1 ? 's' : ''} built
+                  {activeTab === 'projects' ? `${projects.length} project${projects.length !== 1 ? 's' : ''} built` : `${ppItems.length} solution${ppItems.length !== 1 ? 's' : ''} built`}
                 </p>
               </div>
             )}
           </div>
 
+          {/* Tab Switcher */}
+          <div className="flex w-full md:w-auto bg-white/10 backdrop-blur-sm border-[3px] border-black shadow-[4px_4px_0px_#000] overflow-hidden">
+            <button
+              onClick={() => setActiveTab('projects')}
+              className={`flex-1 md:flex-none flex items-center justify-center gap-2.5 px-4 sm:px-6 py-3.5 font-black uppercase text-xs tracking-wide transition-all ${
+                activeTab === 'projects'
+                  ? 'bg-[#FFD600] text-black'
+                  : isDark
+                    ? 'bg-transparent text-white/70 hover:bg-white/10 hover:text-white'
+                    : 'bg-transparent text-black/60 hover:bg-black/5 hover:text-black'
+              }`}
+            >
+              <svg viewBox="0 0 24 24" className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+              </svg>
+              Projects
+            </button>
+            <div className={`w-[3px] ${isDark ? 'bg-white/20' : 'bg-black'} flex-shrink-0`} />
+            <button
+              onClick={() => setActiveTab('power-platform')}
+              className={`flex-1 md:flex-none flex items-center justify-center gap-2.5 px-4 sm:px-6 py-3.5 font-black uppercase text-xs tracking-wide transition-all ${
+                activeTab === 'power-platform'
+                  ? 'bg-[#FFD600] text-black'
+                  : isDark
+                    ? 'bg-transparent text-white/70 hover:bg-white/10 hover:text-white'
+                    : 'bg-transparent text-black/60 hover:bg-black/5 hover:text-black'
+              }`}
+            >
+              <svg viewBox="0 0 24 24" className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+              </svg>
+              Power Platform
+            </button>
+          </div>
 
         </div>
       </div>
@@ -356,29 +742,35 @@ const ProjectsPage: React.FC = () => {
           </div>
         )}
 
-        {/* Projects grid */}
-        {!loading && projects.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {projects.map((project, index) => (
-              <ProjectCard
-                key={project.id}
-                project={project}
-                index={index}
-                onClick={() => setSelectedProject({ project, index })}
-              />
-            ))}
-          </div>
+        {/* Projects Tab */}
+        {!loading && activeTab === 'projects' && (
+          <>
+            {projects.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                {projects.map((project, index) => (
+                  <ProjectCard
+                    key={project.id}
+                    project={project}
+                    index={index}
+                    onClick={() => setSelectedProject({ project, index })}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-32 gap-6">
+                <div className="text-8xl">🚧</div>
+                <div className="text-center">
+                  <h2 className="text-4xl font-black uppercase tracking-tighter">No Projects Yet</h2>
+                  <p className="font-bold text-gray-500 mt-2">Check back soon — things are being built!</p>
+                </div>
+              </div>
+            )}
+          </>
         )}
 
-        {/* Empty state */}
-        {!loading && projects.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-32 gap-6">
-            <div className="text-8xl">🚧</div>
-            <div className="text-center">
-              <h2 className="text-4xl font-black uppercase tracking-tighter">No Projects Yet</h2>
-              <p className="font-bold text-gray-500 mt-2">Check back soon — things are being built!</p>
-            </div>
-          </div>
+        {/* Power Platform Tab */}
+        {!loading && activeTab === 'power-platform' && (
+          <PowerPlatformSection isDark={isDark} items={ppItems} />
         )}
       </div>
 

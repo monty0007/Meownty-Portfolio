@@ -45,3 +45,15 @@ export interface Achievement {
   icon: string;
   color: string;
 }
+
+export interface PowerPlatformItem {
+  id: string;
+  title: string;
+  description: string;
+  category: 'Power Automate' | 'Power Apps' | 'Copilot Studio' | 'Power BI';
+  images?: string[];
+  color: string;
+  link?: string;
+  /** Optional inline flow definition (overrides any data/powerFlows.ts entry) */
+  flow?: import('./data/powerFlows').PowerFlow | null;
+}

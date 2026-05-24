@@ -17,6 +17,46 @@ const LinkedInIcon = () => (
   </svg>
 );
 
+// Microsoft 4-square logo (official brand mark)
+const MicrosoftLogo = ({ className = 'w-4 h-4' }: { className?: string }) => (
+  <svg viewBox="0 0 23 23" className={className} aria-hidden="true">
+    <rect x="1" y="1" width="10" height="10" fill="#F25022" />
+    <rect x="12" y="1" width="10" height="10" fill="#7FBA00" />
+    <rect x="1" y="12" width="10" height="10" fill="#00A4EF" />
+    <rect x="12" y="12" width="10" height="10" fill="#FFB900" />
+  </svg>
+);
+
+// GitHub Octocat mark (for Copilot certification)
+const GitHubMark = ({ className = 'w-4 h-4' }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden="true">
+    <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z" />
+  </svg>
+);
+
+type Cert = {
+  code: string;
+  name: string;
+  color: string;
+  brand: 'microsoft' | 'github';
+  /** 1 = Fundamentals, 2 = Associate, 3 = Expert. 0 = no stars (show label instead). */
+  level: 0 | 1 | 2 | 3;
+  /** Label shown when level === 0 (e.g. 'Intermediate'). */
+  levelLabel?: string;
+  link?: string;
+};
+
+// Microsoft & GitHub certifications — edit codes/names/colors/links here
+const CERTIFICATIONS: Cert[] = [
+  { code: 'AZ-900',     name: 'Azure Fundamentals',         color: '#00A4EF', brand: 'microsoft', level: 1, link: 'https://learn.microsoft.com/credentials/certifications/azure-fundamentals/' },
+  { code: 'AI-102',     name: 'Azure AI Engineer',          color: '#7FBA00', brand: 'microsoft', level: 2, link: 'https://learn.microsoft.com/credentials/certifications/azure-ai-engineer/' },
+  { code: 'PL-400',     name: 'Power Platform Developer',   color: '#6B4BFF', brand: 'microsoft', level: 2, link: 'https://learn.microsoft.com/credentials/certifications/power-platform-developer-associate/' },
+  { code: 'SC-300',     name: 'Identity & Access Admin',    color: '#F25022', brand: 'microsoft', level: 2, link: 'https://learn.microsoft.com/credentials/certifications/identity-and-access-administrator/' },
+  { code: 'PL-600',     name: 'Solution Architect',         color: '#742774', brand: 'microsoft', level: 3, link: 'https://learn.microsoft.com/credentials/certifications/power-platform-solution-architect-expert/' },
+  { code: 'AB-100',     name: 'Applied Skills',             color: '#FFB900', brand: 'microsoft', level: 3 },
+  { code: 'GH-Copilot', name: 'GitHub Copilot · Azure',     color: '#FFFFFF', brand: 'github',    level: 0, levelLabel: 'Intermediate', link: 'https://github.com/copilot' },
+];
+
 const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
   const [time, setTime] = useState(new Date().toLocaleTimeString());
 
@@ -142,6 +182,98 @@ const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
                 </li>
               </ul>
             </div>
+          </div>
+        </div>
+
+        {/* Microsoft & GitHub Certifications */}
+        <div className="mb-16">
+          <div className="flex items-center gap-4 mb-6">
+            <h4 className="text-xs font-black uppercase text-gray-500 tracking-[0.2em] whitespace-nowrap">
+              Certifications
+            </h4>
+            <div className="flex-1 h-px bg-white/10"></div>
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#FFD600]">
+              ×{CERTIFICATIONS.length}
+            </span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+            {CERTIFICATIONS.map((cert) => {
+              const Brand = cert.brand === 'github' ? GitHubMark : MicrosoftLogo;
+              const brandLabel = cert.brand === 'github' ? 'GitHub' : 'Microsoft';
+              const Tile = (
+                <>
+                  <div
+                    className="absolute top-0 left-0 right-0 h-1 transition-all group-hover:h-1.5"
+                    style={{ backgroundColor: cert.color }}
+                  ></div>
+                  <div className="flex items-center justify-between gap-1.5 mb-2">
+                    <Brand className="w-4 h-4" />
+                    <span className="text-[8px] font-black tracking-widest text-gray-500 group-hover:text-black/60 uppercase">
+                      {brandLabel}
+                    </span>
+                  </div>
+                  <div className="font-black text-base tracking-tight leading-none mb-1.5 truncate">
+                    {cert.code}
+                  </div>
+                  <div className="text-[9px] font-bold uppercase tracking-wider text-gray-400 group-hover:text-black/70 leading-tight mb-2">
+                    {cert.name}
+                  </div>
+                  {/* Level: stars (1–3) or text label (e.g. Intermediate) */}
+                  {cert.level > 0 ? (
+                    <div
+                      className="flex items-center gap-0.5"
+                      aria-label={`Level ${cert.level} of 3`}
+                      title={
+                        cert.level === 1 ? 'Fundamentals'
+                        : cert.level === 2 ? 'Associate'
+                        : 'Expert'
+                      }
+                    >
+                      {[1, 2, 3].map((i) => (
+                        <svg
+                          key={i}
+                          viewBox="0 0 24 24"
+                          className="w-3 h-3"
+                          fill={i <= cert.level ? '#FFD600' : 'currentColor'}
+                          style={i <= cert.level ? undefined : { opacity: 0.18 }}
+                          aria-hidden="true"
+                        >
+                          <path d="M12 2l2.9 6.9 7.1.6-5.4 4.7 1.6 7-6.2-3.7-6.2 3.7 1.6-7L2 9.5l7.1-.6L12 2z" />
+                        </svg>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="inline-flex items-center gap-1 px-1.5 py-0.5 border border-white/20 group-hover:border-black/30 text-[8px] font-black uppercase tracking-widest text-gray-300 group-hover:text-black/70 w-fit">
+                      {cert.levelLabel || 'Certified'}
+                    </div>
+                  )}
+                </>
+              );
+
+              const tileClasses =
+                'group relative bg-white/5 border-2 border-white/15 p-3 hover:bg-white hover:text-black transition-all hover:-translate-y-1 hover:shadow-[4px_4px_0px_#FFD600] overflow-hidden block';
+
+              return cert.link ? (
+                <a
+                  key={cert.code}
+                  href={cert.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={tileClasses}
+                  aria-label={`${cert.code} — ${cert.name}`}
+                >
+                  {Tile}
+                </a>
+              ) : (
+                <div
+                  key={cert.code}
+                  className={`${tileClasses} cursor-default`}
+                  aria-label={`${cert.code} — ${cert.name}`}
+                >
+                  {Tile}
+                </div>
+              );
+            })}
           </div>
         </div>
 

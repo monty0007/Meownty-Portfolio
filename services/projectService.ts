@@ -4,9 +4,85 @@ import { PROJECTS } from '../constants';
 
 // In-memory cache — same pattern as blogService
 let projectsCache: Project[] | null = null;
+let projectsLightCache: Project[] | null = null;
 
 export const invalidateProjectCache = () => {
     projectsCache = null;
+    projectsLightCache = null;
+};
+
+// Lightweight fetch — skips the large base64 `image_url` column so the admin
+// list loads fast. Use `getProjectImage(id)` to lazily fetch the image when
+// the user actually opens a project for editing.
+export const getProjectsLight = async (): Promise<Project[]> => {
+    if (isMock) return PROJECTS;
+    if (projectsLightCache) return projectsLightCache;
+    if (projectsCache) return projectsCache;
+    try {
+        const result = await db.execute(
+            'SELECT id, title, description, tags, color, live_link, github_link, disabled, sort_order FROM projects ORDER BY sort_order ASC, id ASC'
+        );
+        if (result.rows.length === 0) return PROJECTS;
+
+        projectsLightCache = result.rows.map((row: any) => ({
+            id: String(row.id),
+            title: row.title || '',
+            description: row.description || '',
+            image: '',
+            tags: (() => { try { return JSON.parse(row.tags || '[]'); } catch { return []; } })(),
+            color: row.color || '#FFD600',
+            link: row.live_link || '',
+            githubLink: row.github_link || '',
+            disabled: row.disabled === 1 || row.disabled === true,
+        }));
+        return projectsLightCache;
+    } catch (error) {
+        console.error('Failed to fetch projects (light):', error);
+        return PROJECTS;
+    }
+};
+
+// Fetch only the id + image_url for every project. Used by the admin to
+// hydrate thumbnails in the background after the lightweight list renders.
+export const getProjectImages = async (): Promise<Record<string, string>> => {
+    if (isMock) {
+        return PROJECTS.reduce((acc, p) => {
+            if (p.image) acc[p.id] = p.image;
+            return acc;
+        }, {} as Record<string, string>);
+    }
+    try {
+        const result = await db.execute(
+            'SELECT id, image_url FROM projects ORDER BY sort_order ASC, id ASC'
+        );
+        const map: Record<string, string> = {};
+        for (const row of result.rows as any[]) {
+            if (row.image_url) map[String(row.id)] = row.image_url;
+        }
+        return map;
+    } catch (error) {
+        console.error('Failed to fetch project images:', error);
+        return {};
+    }
+};
+
+// Fetch a single project's image_url on demand (used when editing).
+export const getProjectImage = async (id: string): Promise<string> => {
+    if (isMock) {
+        const p = PROJECTS.find(p => p.id === id);
+        return p?.image || '';
+    }
+    try {
+        const result = await db.execute({
+            sql: 'SELECT image_url FROM projects WHERE id = ? LIMIT 1',
+            args: [id],
+        });
+        const row: any = result.rows[0];
+        return row?.image_url || '';
+    } catch (error) {
+        console.error('Failed to fetch project image:', error);
+        return '';
+    }
 };
 
 // Persist a new ordering to the DB — single batched round-trip.

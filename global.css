@@ -19,6 +19,17 @@
   }
 }
 
+/* Hide scrollbar but keep scrollability (used inside modals) */
+.pp-hide-scrollbar {
+  scrollbar-width: none;        /* Firefox */
+  -ms-overflow-style: none;     /* IE/Edge legacy */
+}
+.pp-hide-scrollbar::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;                /* Chromium / WebKit */
+}
+
 /* ─── Performance: respect reduced motion ─────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

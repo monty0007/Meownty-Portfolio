@@ -8,13 +8,23 @@ import {
   deleteAchievement as deleteAchievementDb,
   saveAchievementOrder,
 } from '../services/achievementService';
-import { getProjects, createProject, updateProject, deleteProject, saveProjectOrder } from '../services/projectService';
-import { Achievement, Project } from '../types';
+import { getProjects, getProjectsLight, getProjectImage, getProjectImages, createProject, updateProject, deleteProject, saveProjectOrder } from '../services/projectService';
+import {
+  getPowerPlatformItems,
+  createPowerPlatformItem,
+  updatePowerPlatformItem,
+  deletePowerPlatformItem,
+  savePowerPlatformOrder,
+} from '../services/powerPlatformService';
+import { Achievement, Project, PowerPlatformItem } from '../types';
+import { PowerFlow } from '../data/powerFlows';
+import { POWER_FLOWS, POWER_FLOWS_BY_TITLE } from '../data/powerFlows';
+import { FlowEditor } from './FlowEditor';
 import Toast from './Toast';
 import heic2any from 'heic2any';
 
 const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
-  const [tab, setTab] = useState<'blogs' | 'achievements' | 'projects'>('blogs');
+  const [tab, setTab] = useState<'blogs' | 'achievements' | 'projects' | 'power-platform'>('blogs');
   const [showManual, setShowManual] = useState(false);
   const [blogs, setBlogs] = useState<BlogPost[]>([]);
   const [editingBlogId, setEditingBlogId] = useState<number | null>(null);
@@ -28,6 +38,25 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const [deletingAch, setDeletingAch] = useState(false);
   const [savingProject, setSavingProject] = useState(false);
   const [deletingProject, setDeletingProject] = useState(false);
+
+  // Power Platform state
+  const [ppItems, setPpItems] = useState<PowerPlatformItem[]>([]);
+  const [editingPpId, setEditingPpId] = useState<string | null>(null);
+  const [savingPp, setSavingPp] = useState(false);
+  const [deletingPp, setDeletingPp] = useState(false);
+  const [showDeletePpModal, setShowDeletePpModal] = useState(false);
+  const [deletePpTargetId, setDeletePpTargetId] = useState<string | null>(null);
+  const getDefaultPpState = () => ({
+    title: '',
+    description: '',
+    category: 'Power Automate' as PowerPlatformItem['category'],
+    images: [] as string[],
+    color: '#0066FF',
+    link: '',
+    flow: null as PowerFlow | null,
+  });
+  const [newPp, setNewPp] = useState(getDefaultPpState());
+  const ppFormRef = useRef<HTMLDivElement>(null);
 
   // Projects state
   const [projects, setProjects] = useState<Project[]>([]);
@@ -145,6 +174,7 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     refreshData();
     refreshAchievements();
     refreshProjects();
+    refreshPpItems();
   }, []);
 
   const refreshAchievements = async () => {
@@ -153,8 +183,19 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   };
 
   const refreshProjects = async () => {
-    const data = await getProjects();
+    // Light fetch — skips heavy base64 image_url for fast admin load.
+    // Full image is fetched on-demand when the user clicks Edit.
+    const data = await getProjectsLight();
     setProjects(data);
+    // Hydrate thumbnails asynchronously so the list stays snappy.
+    getProjectImages().then(imageMap => {
+      setProjects(prev => prev.map(p => imageMap[p.id] ? { ...p, image: imageMap[p.id] } : p));
+    }).catch(() => { /* non-fatal: thumbnails just won't appear */ });
+  };
+
+  const refreshPpItems = async () => {
+    const data = await getPowerPlatformItems();
+    setPpItems(data);
   };
 
   const refreshData = async () => {
@@ -581,7 +622,8 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     }
   };
 
-  const handleEditProject = (project: Project) => {
+  const handleEditProject = async (project: Project) => {
+    setTab('projects');
     setEditingProjectId(project.id);
     setNewProject({
       title: project.title,
@@ -598,6 +640,13 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     setTimeout(() => {
       projectFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 50);
+    // Lazy-load the full image (skipped by the light list fetch).
+    if (!project.image) {
+      const image = await getProjectImage(project.id);
+      if (image) {
+        setNewProject(prev => ({ ...prev, image }));
+      }
+    }
   };
 
   const handleDeleteProject = (id: string) => {
@@ -641,18 +690,56 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   };
 
   const dragIndexRef = useRef<number | null>(null);
+  const dragSourceRef = useRef<'projects' | 'pp' | null>(null);
 
   const handleDragStart = (index: number) => {
     dragIndexRef.current = index;
+    dragSourceRef.current = 'projects';
   };
 
   const handleDrop = async (dropIndex: number) => {
+    // If dragged from PP section → convert PP item to Project
+    if (dragSourceRef.current === 'pp') {
+      const dragIndex = ppDragIndexRef.current;
+      if (dragIndex === null) return;
+      const ppItem = ppItems[dragIndex];
+      ppDragIndexRef.current = null;
+      dragSourceRef.current = null;
+      // Convert PP item → Project
+      const projectData: Omit<Project, 'id'> = {
+        title: ppItem.title,
+        description: ppItem.description,
+        image: ppItem.images?.[0] || '',
+        tags: [ppItem.category],
+        color: ppItem.color,
+        link: ppItem.link || '',
+        githubLink: '',
+        disabled: false,
+      };
+      try {
+        const created = await createProject(projectData);
+        if (created.success) {
+          await deletePowerPlatformItem(ppItem.id);
+          await refreshProjects();
+          await refreshPpItems();
+          showFeedback(`Moved "${ppItem.title}" to Projects! 🚀`);
+        } else {
+          showFeedback('Move failed! 🛑', 'error');
+        }
+      } catch {
+        showFeedback('Move failed! 🛑', 'error');
+      }
+      return;
+    }
+
+    // Normal reorder within projects
     const dragIndex = dragIndexRef.current;
     if (dragIndex === null || dragIndex === dropIndex) return;
     const updated = [...projects];
     const [dragged] = updated.splice(dragIndex, 1);
     updated.splice(dropIndex, 0, dragged);
     dragIndexRef.current = null;
+    dragSourceRef.current = null;
     setProjects(updated);
     try {
       await saveProjectOrder(updated.map(p => p.id));
@@ -660,6 +747,170 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     } catch {
       setProjects(projects);
       showFeedback('Failed to save order! 🛑', 'error');
+    }
+  };
+
+  // Handle drop on the projects grid zone (for cross-section drops)
+  const handleDropOnProjectsZone = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (dragSourceRef.current === 'pp') {
+      handleDrop(projects.length); // Append at end
+    }
+  };
+
+  // ─── Power Platform handlers ───────────────────────────────────────────────
+  const ppDragIndexRef = useRef<number | null>(null);
+
+  const handleSavePp = async () => {
+    if (savingPp) return;
+    if (!newPp.title.trim()) {
+      showFeedback('Title is required! 🛑', 'error');
+      return;
+    }
+    const itemData: Omit<PowerPlatformItem, 'id'> = {
+      title: newPp.title.trim(),
+      description: newPp.description.trim(),
+      category: newPp.category,
+      images: newPp.images.filter(Boolean),
+      color: newPp.color,
+      link: newPp.link.trim(),
+      flow: newPp.flow,
+    };
+    setSavingPp(true);
+    try {
+      let result;
+      if (editingPpId !== null) {
+        result = await updatePowerPlatformItem(editingPpId, itemData);
+      } else {
+        result = await createPowerPlatformItem(itemData);
+      }
+      if (result.success) {
+        await refreshPpItems();
+        setNewPp(getDefaultPpState());
+        setEditingPpId(null);
+        showFeedback(editingPpId !== null ? 'ITEM UPDATED! ✏️✨' : 'ITEM CREATED! ⚡✨');
+      } else {
+        showFeedback(`FAILED! ${result.message} 🛑`, 'error');
+      }
+    } finally {
+      setSavingPp(false);
+    }
+  };
+
+  const handleEditPp = (item: PowerPlatformItem) => {
+    setTab('power-platform');
+    setEditingPpId(item.id);
+    // If no custom flow saved on the item, pre-load any built-in flow that
+    // matches by id or title so the user can see / tweak it instead of
+    // starting from scratch.
+    const builtInFlow =
+      POWER_FLOWS[item.id] ||
+      POWER_FLOWS_BY_TITLE[item.title] ||
+      null;
+    const flowForEditor = item.flow
+      ? item.flow
+      : builtInFlow
+        ? JSON.parse(JSON.stringify(builtInFlow)) as PowerFlow
+        : null;
+    setNewPp({
+      title: item.title,
+      description: item.description,
+      category: item.category,
+      images: item.images || [],
+      color: item.color,
+      link: item.link || '',
+      flow: flowForEditor,
+    });
+    showFeedback('Item loaded for editing! ✏️');
+    setTimeout(() => {
+      ppFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
+  };
+
+  const handleDeletePp = (id: string) => {
+    setDeletePpTargetId(id);
+    setShowDeletePpModal(true);
+  };
+
+  const confirmDeletePp = async () => {
+    if (!deletePpTargetId || deletingPp) return;
+    setDeletingPp(true);
+    try {
+      const success = await deletePowerPlatformItem(deletePpTargetId);
+      if (success) {
+        await refreshPpItems();
+        showFeedback('ITEM DELETED! 🗑️');
+      } else {
+        showFeedback('DELETE FAILED! 🛑', 'error');
+      }
+    } finally {
+      setShowDeletePpModal(false);
+      setDeletePpTargetId(null);
+      setDeletingPp(false);
+    }
+  };
+
+  const handlePpDragStart = (index: number) => {
+    ppDragIndexRef.current = index;
+    dragSourceRef.current = 'pp';
+  };
+
+  const handlePpDrop = async (dropIndex: number) => {
+    // If dragged from Projects section → convert Project to PP item
+    if (dragSourceRef.current === 'projects') {
+      const dragIndex = dragIndexRef.current;
+      if (dragIndex === null) return;
+      const project = projects[dragIndex];
+      dragIndexRef.current = null;
+      dragSourceRef.current = null;
+      // Convert Project → PP item
+      const ppData: Omit<PowerPlatformItem, 'id'> = {
+        title: project.title,
+        description: project.description,
+        category: 'Power Apps',
+        images: project.image ? [project.image] : [],
+        color: project.color,
+        link: project.link || '',
+      };
+      try {
+        const created = await createPowerPlatformItem(ppData);
+        if (created.success) {
+          await deleteProject(project.id);
+          await refreshProjects();
+          await refreshPpItems();
+          showFeedback(`Moved "${project.title}" to Power Platform! ⚡`);
+        } else {
+          showFeedback('Move failed! 🛑', 'error');
+        }
+      } catch {
+        showFeedback('Move failed! 🛑', 'error');
+      }
+      return;
+    }
+
+    // Normal reorder within PP
+    const dragIndex = ppDragIndexRef.current;
+    if (dragIndex === null || dragIndex === dropIndex) return;
+    const updated = [...ppItems];
+    const [dragged] = updated.splice(dragIndex, 1);
+    updated.splice(dropIndex, 0, dragged);
+    ppDragIndexRef.current = null;
+    dragSourceRef.current = null;
+    setPpItems(updated);
+    try {
+      await savePowerPlatformOrder(updated.map(p => p.id));
+      showFeedback('Order saved! ✅');
+    } catch {
+      setPpItems(ppItems);
+      showFeedback('Failed to save order! 🛑', 'error');
+    }
+  };
+
+  // Handle drop on the PP grid zone (for cross-section drops)
+  const handleDropOnPpZone = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (dragSourceRef.current === 'projects') {
+      handlePpDrop(ppItems.length); // Append at end
     }
   };
 
@@ -967,7 +1218,7 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       {/* ── Stats + Tabs ── */}
       <div className="bg-white border-b-4 border-black px-6 py-4">
         <div className="max-w-6xl mx-auto space-y-4">
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="bg-[#FF4B4B] border-4 border-black p-3 sm:p-4 shadow-[4px_4px_0px_#000] flex items-center gap-2 sm:gap-3">
               <span className="text-xl sm:text-2xl">📝</span>
               <div>
@@ -987,6 +1238,13 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
               <div>
                 <div className="text-xl sm:text-2xl font-black text-white leading-none">{projects.length}</div>
                 <div className="text-[9px] sm:text-[10px] font-black uppercase text-white/80">Projects</div>
+              </div>
+            </div>
+            <div className="bg-[#742774] border-4 border-black p-3 sm:p-4 shadow-[4px_4px_0px_#000] flex items-center gap-2 sm:gap-3">
+              <span className="text-xl sm:text-2xl">⚡</span>
+              <div>
+                <div className="text-xl sm:text-2xl font-black text-white leading-none">{ppItems.length}</div>
+                <div className="text-[9px] sm:text-[10px] font-black uppercase text-white/80">Power Platform</div>
               </div>
             </div>
           </div>
@@ -1016,6 +1274,15 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
               <span>🚀</span>
               <span className="hidden sm:inline">Projects</span>
               <span className={`px-1.5 py-0.5 text-[10px] font-black border-2 border-black rounded-full leading-none ${tab === 'projects' ? 'bg-white text-[#00A1FF]' : 'bg-black text-white'}`}>{projects.length}</span>
+            </button>
+            <div className="w-1 bg-black flex-shrink-0" />
+            <button
+              onClick={() => setTab('power-platform')}
+              className={`flex-1 px-4 py-3 font-black uppercase text-sm flex items-center justify-center gap-2 transition-all ${tab === 'power-platform' ? 'bg-[#742774] text-white' : 'bg-white text-black hover:bg-[#fdf0fd]'}`}
+            >
+              <span>⚡</span>
+              <span className="hidden sm:inline">Power Platform</span>
+              <span className={`px-1.5 py-0.5 text-[10px] font-black border-2 border-black rounded-full leading-none ${tab === 'power-platform' ? 'bg-white text-[#742774]' : 'bg-black text-white'}`}>{ppItems.length}</span>
             </button>
           </div>
         </div>
@@ -1345,13 +1612,16 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         )}
       </div>
 
-      {/* ======== PROJECTS TAB ======== */}
-      {tab === 'projects' && (
+      {/* ======== PROJECTS & POWER PLATFORM TAB ======== */}
+      {(tab === 'projects' || tab === 'power-platform') && (
         <div className="max-w-[1400px] mx-auto px-6 pb-20">
+
+        {/* ─── Unified Layout: Form (left) + Grid (right) ─── */}
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-10 text-black">
-          {/* Form */}
-          <div ref={projectFormRef} className="lg:col-span-2 space-y-8">
-            <div className="bg-white border-4 border-black p-8 shadow-[10px_10px_0px_#000]">
+          {/* Form (toggled by tab) */}
+          <div className="lg:col-span-2 space-y-8">
+            {tab === 'projects' && (
+            <div ref={projectFormRef} className="bg-white border-4 border-black p-8 shadow-[10px_10px_0px_#000]">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-black uppercase">
                   {editingProjectId !== null ? '✏️ Edit Project' : '🚀 New Project'}
@@ -1493,67 +1763,337 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                 </button>
               </div>
             </div>
+            )}
+
+            {tab === 'power-platform' && (
+            <div ref={ppFormRef} className="bg-white border-4 border-black p-8 shadow-[10px_10px_0px_#000]">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-black uppercase">
+                  {editingPpId !== null ? '✏️ Edit Item' : '⚡ New Item'}
+                </h2>
+                {editingPpId !== null && (
+                  <button
+                    onClick={() => { setEditingPpId(null); setNewPp(getDefaultPpState()); }}
+                    className="bg-gray-500 text-white px-4 py-2 font-black uppercase border-2 border-black hover:bg-gray-600"
+                  >
+                    Cancel Edit
+                  </button>
+                )}
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <label className="font-black uppercase text-xs mb-1 block">Title <span className="text-red-500">*</span></label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Automated Approval Flow"
+                    value={newPp.title}
+                    onChange={e => setNewPp({ ...newPp, title: e.target.value })}
+                    className="w-full p-4 border-4 border-black font-bold text-black"
+                  />
+                </div>
+                <div>
+                  <label className="font-black uppercase text-xs mb-1 block">Description</label>
+                  <textarea
+                    placeholder="What does this solution do?"
+                    value={newPp.description}
+                    onChange={e => setNewPp({ ...newPp, description: e.target.value })}
+                    className="w-full p-4 border-4 border-black font-bold text-black h-24"
+                  />
+                </div>
+                <div>
+                  <label className="font-black uppercase text-xs mb-1 block">Category</label>
+                  <select
+                    value={newPp.category}
+                    onChange={e => setNewPp({ ...newPp, category: e.target.value as PowerPlatformItem['category'] })}
+                    className="w-full p-4 border-4 border-black font-bold text-black bg-white"
+                  >
+                    <option value="Power Automate">⚡ Power Automate</option>
+                    <option value="Power Apps">📱 Power Apps</option>
+                    <option value="Copilot Studio">🤖 Copilot Studio</option>
+                    <option value="Power BI">📊 Power BI</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="font-black uppercase text-xs mb-1 block">🖼️ Screenshots / Images</label>
+                  <p className="text-xs text-gray-500 font-semibold mb-2">
+                    Add one or more screenshots (Power App screens, flow diagrams, SharePoint lists, etc.)
+                  </p>
+
+                  {/* Existing images list */}
+                  {newPp.images.map((src, idx) => (
+                    <div key={idx} className="flex gap-2 items-start mb-2">
+                      <div className="flex-1 relative">
+                        <img src={src} alt={`img-${idx}`} className="h-20 w-full object-cover border-4 border-black" />
+                        <div className="absolute top-1 left-1 bg-black text-white text-[9px] font-black px-1.5 py-0.5 border border-white">
+                          {idx + 1}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setNewPp(prev => ({ ...prev, images: prev.images.filter((_, i) => i !== idx) }))}
+                        className="mt-1 w-8 h-8 bg-red-500 text-white border-2 border-black font-black text-sm flex items-center justify-center hover:bg-red-600 flex-shrink-0"
+                      >×</button>
+                    </div>
+                  ))}
+
+                  {/* Add image row */}
+                  <div className="flex gap-2 mt-1">
+                    <input
+                      type="url"
+                      placeholder="Paste image URL and press Add..."
+                      id="pp-img-url-input"
+                      className="flex-1 p-3 border-4 border-black font-bold text-black text-sm"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          const val = (e.target as HTMLInputElement).value.trim();
+                          if (val) {
+                            setNewPp(prev => ({ ...prev, images: [...prev.images, val] }));
+                            (e.target as HTMLInputElement).value = '';
+                          }
+                        }
+                      }}
+                    />
+                    <button
+                      onClick={() => {
+                        const input = document.getElementById('pp-img-url-input') as HTMLInputElement;
+                        const val = input?.value.trim();
+                        if (val) {
+                          setNewPp(prev => ({ ...prev, images: [...prev.images, val] }));
+                          input.value = '';
+                        }
+                      }}
+                      className="px-3 py-2 bg-black text-white border-4 border-black font-black uppercase text-xs hover:bg-gray-800 flex-shrink-0"
+                    >
+                      + Add
+                    </button>
+                    <label className="flex items-center justify-center gap-1 bg-[#742774] text-white border-4 border-black px-3 font-black uppercase text-xs cursor-pointer shadow-[4px_4px_0px_#000] hover:bg-purple-500 hover:shadow-[2px_2px_0px_#000] hover:translate-x-[2px] hover:translate-y-[2px] transition-all whitespace-nowrap flex-shrink-0">
+                      📁 Upload
+                      <input
+                        type="file"
+                        accept="image/*,.heic,.heif"
+                        className="hidden"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          try {
+                            const { dataUrl } = await resizeImage(file);
+                            setNewPp(prev => ({ ...prev, images: [...prev.images, dataUrl] }));
+                            showFeedback('Image added! 🖼️✅');
+                          } catch {
+                            showFeedback('Failed to process image! 🛑', 'error');
+                          }
+                          e.target.value = '';
+                        }}
+                      />
+                    </label>
+                  </div>
+                  <p className="text-[10px] text-gray-400 font-semibold mt-1">
+                    Tip: Upload multiple screenshots — first one shows as card thumbnail. Use ← → keys in modal to navigate.
+                  </p>
+                </div>
+                <div>
+                  <label className="font-black uppercase text-xs mb-1 block">🔗 Link (optional)</label>
+                  <input
+                    type="url"
+                    placeholder="https://..."
+                    value={newPp.link}
+                    onChange={e => setNewPp({ ...newPp, link: e.target.value })}
+                    className="w-full p-4 border-4 border-black font-bold text-black"
+                  />
+                </div>
+                <div className="flex flex-col">
+                  <label className="font-black uppercase text-xs mb-1 block">🎨 Accent Color</label>
+                  <div className="flex gap-2 p-3 border-4 border-black flex-wrap">
+                    {['#0066FF','#742774','#00A67E','#F59E0B','#FF4B4B','#10B981','#6B4BFF','#00A1FF'].map(c => (
+                      <div
+                        key={c}
+                        onClick={() => setNewPp({ ...newPp, color: c })}
+                        className={`w-7 h-7 rounded-full border-2 border-black cursor-pointer hover:scale-125 transition-transform ${newPp.color === c ? 'ring-2 ring-black ring-offset-1 scale-125' : ''}`}
+                        style={{ backgroundColor: c }}
+                      />
+                    ))}
+                  </div>
+                </div>
+                <FlowEditor
+                  value={newPp.flow}
+                  onChange={(flow) => setNewPp(prev => ({ ...prev, flow }))}
+                  fallbackId={editingPpId ?? undefined}
+                  fallbackTitle={newPp.title}
+                />
+                <button
+                  onClick={handleSavePp}
+                  disabled={savingPp}
+                  className="cartoon-btn w-full bg-[#742774] text-white py-5 font-black uppercase text-2xl shadow-[10px_10px_0px_#000] disabled:opacity-60 disabled:cursor-wait"
+                >
+                  {savingPp
+                    ? (editingPpId !== null ? '⏳ UPDATING…' : '⏳ CREATING…')
+                    : (editingPpId !== null ? '💾 UPDATE ITEM' : '⚡ CREATE ITEM')}
+                </button>
+              </div>
+            </div>
+            )}
           </div>
 
-          {/* Drag-and-drop order grid */}
-          <div className="lg:col-span-3 space-y-4">
-            <div className="flex items-center justify-between border-b-4 border-black pb-2 mb-4">
-              <h3 className="font-black uppercase text-sm">Project Order</h3>
-              <span className="text-[10px] font-black uppercase text-gray-400 bg-gray-100 border-2 border-black px-2 py-0.5">Drag to reorder</span>
-            </div>
-            {projects.length === 0 && (
-              <div className="bg-white border-4 border-black p-4 text-center font-bold text-gray-500">
-                No projects yet. Launch your first one!
+          {/* Right column: grid for the active tab */}
+          <div className="lg:col-span-3 space-y-6">
+
+            {/* ─── Projects Grid (drop zone) ─── */}
+            {tab === 'projects' && (
+            <div
+              onDragOver={e => { e.preventDefault(); e.currentTarget.classList.add('ring-4', 'ring-[#00A1FF]', 'ring-dashed'); }}
+              onDragLeave={e => { e.currentTarget.classList.remove('ring-4', 'ring-[#00A1FF]', 'ring-dashed'); }}
+              onDrop={e => { e.currentTarget.classList.remove('ring-4', 'ring-[#00A1FF]', 'ring-dashed'); handleDropOnProjectsZone(e); }}
+              className="p-4 border-4 border-black bg-[#f0f9ff] shadow-[4px_4px_0px_#000] transition-all"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-black uppercase text-sm flex items-center gap-2">🚀 Projects <span className="text-[10px] font-black bg-[#00A1FF] text-white px-2 py-0.5 border-2 border-black">{projects.length}</span></h3>
+                <span className="text-[10px] font-black uppercase text-gray-400 bg-white border-2 border-black px-2 py-0.5">Drag to reorder or move</span>
               </div>
-            )}
-            <div className="grid grid-cols-3 xl:grid-cols-4 gap-3">
-              {projects.map((project, index) => (
-                <div
-                  key={project.id}
-                  draggable
-                  onDragStart={() => handleDragStart(index)}
-                  onDragOver={e => e.preventDefault()}
-                  onDrop={() => handleDrop(index)}
-                  className={`relative group cursor-grab active:cursor-grabbing border-4 border-black shadow-[4px_4px_0px_#000] hover:shadow-[6px_6px_0px_#000] hover:-translate-y-1 transition-all bg-white overflow-hidden ${editingProjectId === project.id ? 'ring-4 ring-[#00A1FF]' : ''}`}
-                >
-                  {/* Thumbnail */}
-                  <div className="relative w-full aspect-video bg-gray-100">
-                    {project.image ? (
-                      <img src={project.image} alt={project.title} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center" style={{ backgroundColor: project.color }}>
-                        <span className="text-2xl font-black text-black/30 uppercase">{project.title.charAt(0)}</span>
+              {projects.length === 0 && (
+                <div className="bg-white border-4 border-dashed border-gray-300 p-4 text-center font-bold text-gray-400">
+                  Drop items here to convert to Projects
+                </div>
+              )}
+              <div className="grid grid-cols-3 xl:grid-cols-4 gap-3">
+                {projects.map((project, index) => (
+                  <div
+                    key={project.id}
+                    draggable
+                    onDragStart={() => handleDragStart(index)}
+                    onDragOver={e => e.preventDefault()}
+                    onDrop={e => { e.stopPropagation(); handleDrop(index); }}
+                    className={`relative group cursor-grab active:cursor-grabbing border-4 border-black shadow-[4px_4px_0px_#000] hover:shadow-[6px_6px_0px_#000] hover:-translate-y-1 transition-all bg-white overflow-hidden ${editingProjectId === project.id ? 'ring-4 ring-[#00A1FF]' : ''}`}
+                  >
+                    {/* Thumbnail */}
+                    <div className="relative w-full aspect-video bg-gray-100">
+                      {project.image ? (
+                        <img src={project.image} alt={project.title} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center" style={{ backgroundColor: project.color }}>
+                          <span className="text-2xl font-black text-black/30 uppercase">{project.title.charAt(0)}</span>
+                        </div>
+                      )}
+                      <div className="absolute top-1.5 left-1.5 w-6 h-6 bg-black text-white font-black text-[10px] flex items-center justify-center border-2 border-white">
+                        {index + 1}
                       </div>
-                    )}
-                    {/* Order number pill */}
-                    <div className="absolute top-1.5 left-1.5 w-6 h-6 bg-black text-white font-black text-[10px] flex items-center justify-center border-2 border-white">
-                      {index + 1}
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                        <div className="bg-white/90 border-2 border-black px-2 py-0.5 font-black text-[10px] uppercase">⠿ Drag</div>
+                      </div>
                     </div>
-                    {/* Drag handle overlay */}
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                    <div className="p-2 flex items-center justify-between gap-1">
+                      <span className="text-[11px] font-black uppercase truncate flex-1">{project.title}</span>
+                      <div className="flex gap-1 flex-shrink-0">
+                        <button
+                          onClick={() => handleEditProject(project)}
+                          className="px-2 py-1.5 bg-[#00A1FF] text-white border-2 border-black font-black text-xs uppercase hover:bg-blue-400 shadow-[2px_2px_0px_#000] cursor-pointer"
+                        >✏️</button>
+                        <button
+                          onClick={() => handleDeleteProject(project.id)}
+                          className="px-2 py-1.5 bg-red-500 text-white border-2 border-black font-black text-xs uppercase hover:bg-red-600 shadow-[2px_2px_0px_#000] cursor-pointer"
+                        >🗑️</button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            )}
+
+            {/* Visual separator with hint */}
+            {false && (
+            <div className="flex items-center gap-3">
+              <div className="flex-1 border-t-4 border-dashed border-gray-300" />
+              <span className="text-[10px] font-black uppercase text-gray-400 bg-white border-2 border-black px-3 py-1 shadow-[2px_2px_0px_#000]">↕ Drag between sections</span>
+              <div className="flex-1 border-t-4 border-dashed border-gray-300" />
+            </div>
+            )}
+
+            {/* ─── Power Platform Grid (drop zone) ─── */}
+            {tab === 'power-platform' && (
+            <div
+              onDragOver={e => { e.preventDefault(); e.currentTarget.classList.add('ring-4', 'ring-[#742774]', 'ring-dashed'); }}
+              onDragLeave={e => { e.currentTarget.classList.remove('ring-4', 'ring-[#742774]', 'ring-dashed'); }}
+              onDrop={e => { e.currentTarget.classList.remove('ring-4', 'ring-[#742774]', 'ring-dashed'); handleDropOnPpZone(e); }}
+              className="p-4 border-4 border-black bg-[#fdf0fd] shadow-[4px_4px_0px_#000] transition-all"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-black uppercase text-sm flex items-center gap-2">⚡ Power Platform <span className="text-[10px] font-black bg-[#742774] text-white px-2 py-0.5 border-2 border-black">{ppItems.length}</span></h3>
+                <span className="text-[10px] font-black uppercase text-gray-400 bg-white border-2 border-black px-2 py-0.5">Drag to reorder or move</span>
+              </div>
+              {ppItems.length === 0 && (
+                <div className="bg-white border-4 border-dashed border-gray-300 p-4 text-center font-bold text-gray-400">
+                  Drop items here to convert to Power Platform
+                </div>
+              )}
+              <div className="grid grid-cols-2 xl:grid-cols-3 gap-3">
+                {ppItems.map((item, index) => (
+                  <div
+                    key={item.id}
+                    draggable
+                    onDragStart={() => handlePpDragStart(index)}
+                    onDragOver={e => e.preventDefault()}
+                    onDrop={e => { e.stopPropagation(); handlePpDrop(index); }}
+                    className={`relative group cursor-grab active:cursor-grabbing border-4 border-black shadow-[4px_4px_0px_#000] hover:shadow-[6px_6px_0px_#000] hover:-translate-y-1 transition-all bg-white overflow-hidden ${editingPpId === item.id ? 'ring-4 ring-[#742774]' : ''}`}
+                  >
+                    <div className="px-3 py-2 border-b-4 border-black flex items-center justify-between" style={{ backgroundColor: item.color + '22' }}>
+                      <span className="text-[10px] font-black uppercase tracking-wide" style={{ color: item.color }}>{item.category}</span>
+                      <div className="w-5 h-5 bg-black text-white font-black text-[10px] flex items-center justify-center border border-white">
+                        {index + 1}
+                      </div>
+                    </div>
+                    <div className="p-3">
+                      <span className="text-xs font-black uppercase truncate block mb-2">{item.title}</span>
+                      <p className="text-[10px] text-gray-600 line-clamp-2 mb-2">{item.description}</p>
+                      <div className="flex gap-1">
+                        <button
+                          onClick={() => handleEditPp(item)}
+                          className="flex-1 px-2 py-1.5 bg-[#742774] text-white border-2 border-black font-black text-[10px] uppercase hover:bg-purple-500 shadow-[2px_2px_0px_#000] cursor-pointer"
+                        >✏️</button>
+                        <button
+                          onClick={() => handleDeletePp(item.id)}
+                          className="px-2 py-1.5 bg-red-500 text-white border-2 border-black font-black text-[10px] uppercase hover:bg-red-600 shadow-[2px_2px_0px_#000] cursor-pointer"
+                        >🗑️</button>
+                      </div>
+                    </div>
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100 pointer-events-none">
                       <div className="bg-white/90 border-2 border-black px-2 py-0.5 font-black text-[10px] uppercase">⠿ Drag</div>
                     </div>
                   </div>
-                  {/* Name + actions */}
-                  <div className="p-2 flex items-center justify-between gap-1">
-                    <span className="text-[11px] font-black uppercase truncate flex-1">{project.title}</span>
-                    <div className="flex gap-1 flex-shrink-0">
-                      <button
-                        onClick={() => handleEditProject(project)}
-                        className="px-2 py-1.5 bg-[#00A1FF] text-white border-2 border-black font-black text-xs uppercase hover:bg-blue-400 shadow-[2px_2px_0px_#000] cursor-pointer"
-                      >✏️ EDIT</button>
-                      <button
-                        onClick={() => handleDeleteProject(project.id)}
-                        className="px-2 py-1.5 bg-red-500 text-white border-2 border-black font-black text-xs uppercase hover:bg-red-600 shadow-[2px_2px_0px_#000] flex items-center justify-center cursor-pointer"
-                      >🗑️</button>
-                    </div>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
+            )}
+
           </div>
         </div>
+
         </div>
+      )}
+
+      {/* Power Platform Delete Modal */}
+      {showDeletePpModal && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white border-[6px] border-black p-8 shadow-[16px_16px_0px_#000] max-w-sm w-full mx-4 text-center">
+            <div className="text-6xl mb-4">🗑️</div>
+            <h3 className="text-2xl font-black uppercase mb-3">Delete Item?</h3>
+            <p className="font-bold text-gray-600 mb-6">This action cannot be undone.</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setShowDeletePpModal(false); setDeletePpTargetId(null); }}
+                className="flex-1 bg-gray-200 text-black border-4 border-black py-3 font-black uppercase shadow-[4px_4px_0px_#000] hover:bg-gray-300"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeletePp}
+                disabled={deletingPp}
+                className="flex-1 bg-red-500 text-white border-4 border-black py-3 font-black uppercase shadow-[4px_4px_0px_#000] hover:bg-red-600 disabled:opacity-60"
+              >
+                {deletingPp ? '⏳ Deleting…' : '🗑️ Delete'}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
 
       <style>{`

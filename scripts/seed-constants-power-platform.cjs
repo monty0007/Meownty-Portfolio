@@ -1,0 +1,90 @@
+// One-time script: seeds all POWER_PLATFORM_ITEMS from constants into the DB.
+// Run with: node scripts/seed-constants-power-platform.cjs
+
+const { createClient } = require('@libsql/client');
+require('dotenv').config();
+
+const url = process.env.VITE_TURSO_DATABASE_URL;
+const authToken = process.env.VITE_TURSO_AUTH_TOKEN;
+
+if (!url) {
+  console.error('❌ VITE_TURSO_DATABASE_URL is missing in .env');
+  process.exit(1);
+}
+
+const db = createClient({ url, authToken });
+
+const ITEMS = [
+  // Power Apps
+  { title: 'Internal Orders & Quotations Manager', description: 'Internal management Power App for a team to create and manage Orders and Quotations under a single workspace. Two dedicated sections (Orders, Quotations) with full version history and edit tracking. Data is persisted to SharePoint Lists and Document Libraries, so the team gets a structured, auditable record of every transaction.', category: 'Power Apps', image: '', color: '#742774', link: '' },
+  { title: 'Org-Wide Digitization App (Dataverse)', description: 'A complex digitization Power App for an organization that consolidates multiple business pages into a single sidebar navigation. The sidebar hosts multiple vertical galleries — users can pick any page and start filling its form right there. Backed by a deeply structured Dataverse schema for relational, scalable storage across all digitized processes.', category: 'Power Apps', image: '', color: '#A93BA9', link: '' },
+
+  // Power Automate
+  { title: 'Forms → OneDrive Upload Request', description: 'Triggered by a new Microsoft Forms response, this flow generates a unique Request ID from the current date/time, creates a placeholder file in OneDrive (Uploads folder) named with that ID, waits briefly, generates an org-wide share link, logs the request into a SharePoint list, and emails the requester the secure upload link — fully automating file request handling and record-keeping.', category: 'Power Automate', image: '', color: '#0066FF', link: '' },
+  { title: 'OneDrive Upload → SharePoint Link Sync', description: 'When a file is created in a specific OneDrive folder, the flow splits the file path to extract a unique identifier, generates a shareable link, queries a SharePoint list for related items using that identifier, and updates every matching item with the new file link — keeping OneDrive uploads and SharePoint records perfectly in sync.', category: 'Power Automate', image: '', color: '#1976D2', link: '' },
+  { title: 'Vendor Onboarding Automation', description: 'Forms-triggered vendor onboarding flow that parses PAN, GST, MSME and Cheque document links, generates a unique Vendor ID, creates a dedicated SharePoint folder, downloads and re-uploads every document, generates per-document share links, writes a consolidated SharePoint list item, and kicks off an approval with all links attached — a fully auditable, end-to-end onboarding pipeline.', category: 'Power Automate', image: '', color: '#388E3C', link: '' },
+  { title: 'Power Apps → SharePoint File Upload', description: 'Invoked from a Power App, this flow accepts a file payload, creates it inside a specified SharePoint document library folder, retrieves the file properties including its URL, and responds back to the calling Power App with the URL — providing a clean bridge between Power Apps and SharePoint storage.', category: 'Power Automate', image: '', color: '#0288D1', link: '' },
+  { title: 'Quotation Approval Flow', description: 'Triggered from Power Apps with company name, salesperson, file link and file ID. It starts an approval routed to a designated approver and, based on the response, updates the related SharePoint item status to “Approved” or “Rejected” — automating and tracking the quotation review lifecycle end-to-end.', category: 'Power Automate', image: '', color: '#E53935', link: '' },
+  { title: 'Reportix — Dataverse to Word/PDF Report Generator', description: 'A Cloud Flow that accepts a ReportID from Power Apps and pulls report headers, testing procedures, device particulars, energy source lines and checklist responses from Dataverse. Uses nested loops and array manipulation to organize checklist templates, populates a Word template, saves it to OneDrive, converts to PDF and stores it in a designated folder — fully automating testing report generation.', category: 'Power Automate', image: '', color: '#1565C0', link: '' },
+  { title: 'AI Builder Email Auto-Reply', description: 'Manually triggered flow that runs over a list of users, obtains a Microsoft Graph access token, pulls each user’s unread emails, ensures an “AI-Replies” folder exists, converts each email body from HTML to text, prompts AI Builder to draft a reply, saves it as a draft in “AI-Replies” and marks the source mail as read — an AI-assisted inbox-zero helper.', category: 'Power Automate', image: '', color: '#7B1FA2', link: '' },
+  { title: 'Excel Company Enrichment (CIN Lookup)', description: 'Manually triggered flow that reads company data from an Excel file in OneDrive, iterates each company name, calls an external company-search HTTP API, parses the response to extract details such as CIN, and writes the enriched values back into the original Excel — fully automated data enrichment for company records.', category: 'Power Automate', image: '', color: '#2E7D32', link: '' },
+  { title: 'Excel CIN → Revenue Enrichment', description: 'Reads an Excel table from OneDrive and collects all CIN values, then for each CIN calls an external HTTP endpoint to fetch revenue data and updates the corresponding row back in Excel — keeping company revenue figures continuously up to date from an external API.', category: 'Power Automate', image: '', color: '#558B2F', link: '' },
+  { title: 'Shared Mailbox → Planner + SharePoint + Teams', description: 'Monitors a shared mailbox and, when a new email arrives, branches on attachments. If present: creates a Planner task, spins up a SharePoint folder named with subject + timestamp, saves all attachments there, generates a share link, converts the email body to plain text into the task, emails the sender a confirmation, and posts a Teams message. If no attachments, prompts the sender to resend with the file — a full ticket-intake automation.', category: 'Power Automate', image: '', color: '#F57C00', link: '' },
+  { title: 'Partner Center Customer Sync', description: 'Manually triggered flow that authenticates with Microsoft Partner Center via OAuth2, retrieves an access token, fetches the customer list from the Partner Center API, parses the response, and loops through each customer to collect Tenant ID, Company Name and Delegated Access status into an array variable — ready for downstream processing or reporting.', category: 'Power Automate', image: '', color: '#00838F', link: '' },
+  { title: 'External Email Allowance (Azure Automation)', description: 'Forms-triggered flow to add a new mail contact in Microsoft 365: retrieves the form response, invokes an Azure Automation runbook to create the contact, polls for the runbook job output, and sends a confirmation email back to the requester — providing a seamless, auditable workflow for managing external email allowances.', category: 'Power Automate', image: '', color: '#0277BD', link: '' },
+  { title: 'GDAP Invitation Automation', description: 'Streamlines granting Granular Delegated Admin Privileges via Microsoft Forms and Microsoft Graph. Parses form responses (company, roles, responder, date), maps roles into Graph-required formats and descriptions, obtains an OAuth2 token, creates the GDAP relationship, handles duplicate-username conflicts, and emails the responder an approval link with full role + duration details.', category: 'Power Automate', image: '', color: '#5E35B1', link: '' },
+  { title: 'Manual Approval with Switch Routing', description: 'Manually triggered flow that introduces a short delay, then starts a text approval sent to a designated reviewer. Uses a Switch action on the accepted text (e.g. “apple”) to route into different scoped branches, each carrying its own conditional logic — a reusable pattern for approval-driven workflow branching.', category: 'Power Automate', image: '', color: '#D81B60', link: '' },
+  { title: 'Subscription Renewal Reminder', description: 'Reads a subscription table from Excel, computes each subscription end date, and checks whether today is exactly 45 days before renewal. When the window hits, it sends a personalized email reminder to the user — ensuring no service interruption due to missed renewal dates.', category: 'Power Automate', image: '', color: '#FB8C00', link: '' },
+  { title: 'Delegated Admin Onboarding (Graph)', description: 'Forms-triggered flow that extracts the responder’s email and company, maps selected roles to Graph role-definition IDs, requests an Azure AD token via client credentials, creates a delegated admin relationship in Microsoft Graph with the chosen roles, and emails the responder an acceptance link with role + duration details — a secure, automated delegated-admin onboarding process.', category: 'Power Automate', image: '', color: '#3949AB', link: '' },
+  { title: 'Leave Approval Flow', description: 'End-to-end leave workflow built on Microsoft Forms, SharePoint and Outlook. On submission, the flow retrieves the response and user profile, routes an approval to the manager, and on approval logs the request to a SharePoint list and emails the requester. On rejection, it emails the requester the manager’s comments — clean approvals, tracking and notifications in one flow.', category: 'Power Automate', image: '', color: '#00897B', link: '' },
+  { title: 'Event Registration → Calendar Event', description: 'Watches the Inbox for emails from specific senders with subjects like “Registration Confirmation” or “Event Details”. When matched, converts the HTML body to plain text, extracts the event date and time, and automatically creates a calendar event — turning registration confirmations into actual calendar entries with zero manual effort.', category: 'Power Automate', image: '', color: '#6D4C41', link: '' },
+
+  // Copilot Studio
+  { title: 'Copilot Agent — SharePoint File Counter', description: 'Cloud Flow exposed to a Copilot agent. When invoked from Copilot, it connects to a SharePoint site, lists files from a specified document library, computes the total count (subtracting one to exclude the header/unwanted item), and responds back to Copilot — giving end users instant, conversational file counts on demand.', category: 'Copilot Studio', image: '', color: '#00A4EF', link: '' },
+];
+
+async function seed() {
+  // Ensure the table exists
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS power_platform (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      title       TEXT    NOT NULL,
+      description TEXT    NOT NULL DEFAULT '',
+      category    TEXT    NOT NULL DEFAULT 'Power Automate',
+      image_url   TEXT    NOT NULL DEFAULT '',
+      color       TEXT    NOT NULL DEFAULT '#0066FF',
+      link        TEXT    NOT NULL DEFAULT '',
+      sort_order  INTEGER NOT NULL DEFAULT 0
+    )
+  `);
+
+  // Skip titles that already exist
+  const existing = await db.execute('SELECT title FROM power_platform');
+  const existingTitles = new Set(existing.rows.map(r => r.title));
+
+  let inserted = 0;
+  let skipped = 0;
+
+  for (let i = 0; i < ITEMS.length; i++) {
+    const it = ITEMS[i];
+    if (existingTitles.has(it.title)) {
+      console.log(`⏭️  Skipping (already exists): ${it.title}`);
+      skipped++;
+      continue;
+    }
+    await db.execute({
+      sql: `INSERT INTO power_platform (title, description, category, image_url, color, link, sort_order)
+            VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      args: [it.title, it.description, it.category, it.image, it.color, it.link, i + 1],
+    });
+    console.log(`✅ Inserted: ${it.title}`);
+    inserted++;
+  }
+
+  console.log(`\nDone! Inserted: ${inserted}, Skipped: ${skipped}`);
+}
+
+seed().catch(err => {
+  console.error('❌ Seed failed:', err.message);
+  process.exit(1);
+});

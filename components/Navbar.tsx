@@ -139,7 +139,7 @@ const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentView }) => {
           <a
             href="#contact-banner"
             onClick={(e) => handleLinkClick(e, 'contact-banner')}
-            className="cartoon-btn bg-black text-white px-3 sm:px-6 py-1.5 sm:py-2 rounded-none hover:bg-[#FFD600] hover:text-black shadow-none active:translate-y-1 whitespace-nowrap"
+            className="cartoon-btn bg-black text-white border-2 border-[#FFD600] px-3 sm:px-6 py-1.5 sm:py-2 rounded-none hover:bg-[#FFD600] hover:text-black hover:border-black shadow-none active:translate-y-1 whitespace-nowrap"
           >
             PING ME!
           </a>
