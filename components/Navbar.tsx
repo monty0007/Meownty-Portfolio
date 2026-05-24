@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 interface NavbarProps {
@@ -12,7 +12,7 @@ const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentView }) => {
   const location = useLocation();
 
   const [isVisible, setIsVisible] = useState(true);
-  const [lastScrollY, setLastScrollY] = useState(0);
+  const lastScrollYRef = useRef(0);
   const [isDark, setIsDark] = useState(() => localStorage.getItem('portfolio_hero_dark') !== 'false');
   // True once the user has scrolled past the Hero — forces an opaque dark
   // navbar so white text stays readable over cream / white section backgrounds.
@@ -44,24 +44,30 @@ const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentView }) => {
 
   useEffect(() => {
     let ticking = false;
+    let heroHeight = window.innerHeight;
+    const isHome = location.pathname === '/';
+
+    // Cache hero height once and on resize — avoid DOM query per scroll.
+    const measureHero = () => {
+      if (!isHome) return;
+      const heroEl = document.querySelector('section') as HTMLElement | null;
+      heroHeight = heroEl ? heroEl.offsetHeight : window.innerHeight;
+    };
+    measureHero();
+
     const compute = () => {
       const currentScrollY = window.scrollY;
 
-      // Only recalculate pastHero based on scroll when on the home page.
-      // On other routes there is no Hero, so pastHero stays true (set by the
-      // location.pathname effect above) and must not be overwritten here.
-      if (location.pathname === '/') {
-        const heroEl = document.querySelector('section') as HTMLElement | null;
-        const heroHeight = heroEl ? heroEl.offsetHeight : window.innerHeight;
+      if (isHome) {
         setPastHero(currentScrollY > heroHeight * 0.8);
       }
 
-      if (currentScrollY > lastScrollY && currentScrollY > 100) {
+      if (currentScrollY > lastScrollYRef.current && currentScrollY > 100) {
         setIsVisible(false);
       } else {
         setIsVisible(true);
       }
-      setLastScrollY(currentScrollY);
+      lastScrollYRef.current = currentScrollY;
       ticking = false;
     };
 
@@ -72,8 +78,12 @@ const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentView }) => {
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [lastScrollY, location.pathname]);
+    window.addEventListener('resize', measureHero, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', measureHero);
+    };
+  }, [location.pathname]);
 
   const handleLinkClick = (e: React.MouseEvent, id: string) => {
     e.preventDefault();
@@ -90,12 +100,13 @@ const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentView }) => {
 
   return (
     <nav className={`fixed top-4 sm:top-6 left-1/2 z-[110] w-[95%] sm:w-[90%] max-w-5xl transition-all duration-500 ease-in-out ${isVisible ? 'nav-visible' : 'nav-hidden'}`}>
-      <div className={`backdrop-blur-md border-[3px] sm:border-[4px] shadow-[4px_4px_0px_rgba(0,0,0,0.3)] sm:shadow-[8px_8px_0px_rgba(0,0,0,0.3)] px-3 sm:px-8 py-3 sm:py-4 flex items-center justify-between ${
-        // When over the dark Hero stay translucent; everywhere else (light
-        // section backgrounds) use the opaque dark bar so text stays visible.
+      <div className={`border-[3px] sm:border-[4px] shadow-[4px_4px_0px_rgba(0,0,0,0.3)] sm:shadow-[8px_8px_0px_rgba(0,0,0,0.3)] px-3 sm:px-8 py-3 sm:py-4 flex items-center justify-between ${
+        // When over the dark Hero stay translucent (cheap blur, small area);
+        // everywhere else (most of the page) use a FULLY opaque bar so the
+        // browser doesn't re-rasterise the blur on every scroll frame.
         !pastHero && isDark
-          ? 'bg-white/10 border-white/30'
-          : 'bg-black/90 border-white/20'
+          ? 'bg-white/10 border-white/30 backdrop-blur-md'
+          : 'bg-black border-white/20'
       }`}>
         <div
           className="text-2xl font-black tracking-tighter flex items-center gap-2 sm:gap-3 cursor-pointer group"

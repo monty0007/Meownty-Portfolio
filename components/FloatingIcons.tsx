@@ -113,7 +113,7 @@ const FloatingIcons: React.FC = () => {
       {techLogos.map((char) => (
         <div
           key={char.id}
-          className="absolute floating select-none transition-all duration-1000"
+          className="absolute floating select-none"
           style={{
             left: char.x,
             top: char.y,
@@ -124,13 +124,13 @@ const FloatingIcons: React.FC = () => {
             animationDelay: char.delay,
           }}
         >
-          <img 
-            src={char.url} 
-            alt="" 
+          <img
+            src={char.url}
+            alt=""
             aria-hidden="true"
             loading="lazy"
             decoding="async"
-            className="w-full h-full object-contain filter contrast-[0.8] grayscale hover:grayscale-0 transition-all duration-500"
+            className="w-full h-full object-contain"
           />
         </div>
       ))}

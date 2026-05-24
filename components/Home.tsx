@@ -88,17 +88,17 @@ const Home: React.FC<HomeProps> = ({ targetSection, setTargetSection }) => {
 
             <Projects />
 
-            <div className="bg-[#FFD600]/40 backdrop-blur-sm border-y-8 border-black">
+            <div className="bg-[#FFF1AA] border-y-8 border-black">
                 <Achievements />
             </div>
 
-            <div className="bg-[#00A1FF]/40 backdrop-blur-sm">
+            <div className="bg-[#BCE3FF]">
                 <Skills />
             </div>
 
             <Arcade />
 
-            <section id="contact-banner" className="py-24 px-6 text-center bg-[#FF4B4B]/80 backdrop-blur-lg relative z-10 border-t-8 border-black text-white">
+            <section id="contact-banner" className="py-24 px-6 text-center bg-[#FF4B4B] relative z-10 border-t-8 border-black text-white">
                 <div className="max-w-6xl mx-auto">
                     <h2 className="text-4xl md:text-6xl font-black uppercase mb-12 leading-none tracking-tighter">
                         Deploy <br /> <span className="text-[#FFD600]" style={{ WebkitTextStroke: '2px black' }}>With Me</span>

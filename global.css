@@ -3,7 +3,9 @@
 /* Global defaults */
 @layer base {
   html {
-    scroll-behavior: smooth;
+    /* NOTE: do NOT set scroll-behavior: smooth here \u2014 it makes wheel /
+       trackpad scrolling feel sluggish on long pages. Programmatic
+       scrolls still use `behavior: 'smooth'` where appropriate. */
     -webkit-text-size-adjust: 100%;
     text-rendering: optimizeSpeed;
   }

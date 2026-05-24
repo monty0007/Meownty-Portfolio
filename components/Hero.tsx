@@ -1,9 +1,9 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 const Hero: React.FC = () => {
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [isDark, setIsDark] = useState(() => localStorage.getItem('portfolio_hero_dark') !== 'false');
+  const techLayerRefs = useRef<Array<HTMLDivElement | null>>([]);
 
   useEffect(() => {
     const handler = () => setIsDark(localStorage.getItem('portfolio_hero_dark') !== 'false');
@@ -12,8 +12,8 @@ const Hero: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    // Skip the expensive parallax loop on touch devices and when the user
-    // prefers reduced motion (saves a constant stream of re-renders on mobile).
+    // Parallax: write transforms directly to the DOM via refs inside rAF.
+    // Avoids 60fps React re-renders of the whole Hero tree on mouse-move.
     if (typeof window === 'undefined') return;
     const isFinePointer = window.matchMedia('(pointer: fine)').matches;
     const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -22,14 +22,24 @@ const Hero: React.FC = () => {
     let rafId = 0;
     let nextX = 0;
     let nextY = 0;
+    const factors = techLayerRefs.current.map(el => Number(el?.dataset.factor || 0));
+
+    const flush = () => {
+      const els = techLayerRefs.current;
+      for (let i = 0; i < els.length; i++) {
+        const el = els[i];
+        if (!el) continue;
+        const f = factors[i];
+        el.style.transform = `translate3d(${nextX * f}px, ${nextY * f}px, 0)`;
+      }
+      rafId = 0;
+    };
+
     const handleMouseMove = (e: MouseEvent) => {
       nextX = (e.clientX / window.innerWidth - 0.5) * 40;
       nextY = (e.clientY / window.innerHeight - 0.5) * 40;
       if (rafId) return;
-      rafId = window.requestAnimationFrame(() => {
-        setMousePos({ x: nextX, y: nextY });
-        rafId = 0;
-      });
+      rafId = window.requestAnimationFrame(flush);
     };
     window.addEventListener('mousemove', handleMouseMove, { passive: true });
     return () => {
@@ -84,10 +94,12 @@ const Hero: React.FC = () => {
       {techStack.map((tech, i) => (
         <div
           key={i}
-          className={`hidden md:block absolute ${tech.pos} ${tech.size} floating opacity-40 md:opacity-70 z-0 pointer-events-none transition-transform duration-300 ease-out p-1`}
+          ref={el => { techLayerRefs.current[i] = el; }}
+          data-factor={tech.factor}
+          className={`hidden md:block absolute ${tech.pos} ${tech.size} floating opacity-40 md:opacity-70 z-0 pointer-events-none p-1`}
           style={{
             animationDelay: tech.delay,
-            transform: `translate3d(${mousePos.x * tech.factor}px, ${mousePos.y * tech.factor}px, 0)`
+            willChange: 'transform',
           }}
         >
           <img
@@ -96,7 +108,7 @@ const Hero: React.FC = () => {
             loading="lazy"
             decoding="async"
             aria-hidden="true"
-            className="w-full h-full object-contain drop-shadow-[0_0_12px_rgba(255,214,0,0.3)]"
+            className="w-full h-full object-contain"
           />
         </div>
       ))}
