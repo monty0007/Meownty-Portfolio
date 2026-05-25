@@ -1,6 +1,6 @@
 // Interactive Power Automate-style flow diagram.
 // Cards are draggable (pointer-based). Connectors update live as you drag.
-import React, { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, forwardRef } from 'react';
+import React, { useCallback, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState, forwardRef } from 'react';
 import type { PowerFlow, StepType } from '../data/powerFlows';
 import { ServiceIcon } from './ServiceIcon';
 
@@ -38,7 +38,7 @@ export interface PowerFlowDiagramHandle {
   reset: () => void;
 }
 
-const CARD_H = 78;
+const CARD_H = 96;
 const GAP = 36;
 const PAD = 28;
 const COL_GAP = 60; // horizontal gap between columns in 2-col layout
@@ -79,7 +79,10 @@ export const PowerFlowDiagram = forwardRef<PowerFlowDiagramHandle, Props>(functi
   const containerRef = useRef<HTMLDivElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [fitScale, setFitScale] = useState(1);
-  const [columns, setColumns] = useState(1);
+  const [columns, setColumns] = useState(() => (autoFit && flow.preferTwoColumn && flow.steps.length >= 4 ? 2 : 1));
+  // When auto-fitting, hide the diagram until the first measurement completes
+  // so the user never sees a 1-col → 2-col "zoom out" reflow on open.
+  const [fitted, setFitted] = useState(!autoFit);
   const scale = autoFit ? fitScale : scaleProp;
 
   // Natural (unscaled) dimensions based on current column count
@@ -87,8 +90,11 @@ export const PowerFlowDiagram = forwardRef<PowerFlowDiagramHandle, Props>(functi
   const naturalH = height ?? geom.h;
   const naturalW = geom.w;
 
-  // Auto-fit: observe wrapper size, try 1-col vs 2-col, pick whichever fits better
-  useEffect(() => {
+  // Auto-fit: observe wrapper size, try 1-col vs 2-col, pick whichever fits better.
+  // useLayoutEffect ensures the first measurement + state update happen BEFORE
+  // the browser paints, so the diagram appears already at the correct column
+  // count and scale (no visible reflow / zoom-out effect on open).
+  useLayoutEffect(() => {
     if (!autoFit) return;
     const el = wrapperRef.current;
     if (!el) return;
@@ -116,6 +122,7 @@ export const PowerFlowDiagram = forwardRef<PowerFlowDiagramHandle, Props>(functi
       }
       setColumns(prev => (prev === chosenCols ? prev : chosenCols));
       setFitScale(Math.min(maxScale, Math.max(minScale, chosenScale)));
+      setFitted(true);
     };
     recompute();
     const ro = new ResizeObserver(recompute);
@@ -198,7 +205,11 @@ export const PowerFlowDiagram = forwardRef<PowerFlowDiagramHandle, Props>(functi
   });
 
   return (
-    <div ref={wrapperRef} className="relative w-full h-full flex flex-col items-center justify-center">
+    <div
+      ref={wrapperRef}
+      className="relative w-full h-full flex flex-col items-center justify-center"
+      style={{ visibility: fitted ? 'visible' : 'hidden' }}
+    >
       {!readOnly && !hideResetButton && (
         <button
           type="button"
@@ -293,10 +304,10 @@ export const PowerFlowDiagram = forwardRef<PowerFlowDiagramHandle, Props>(functi
                   >
                     {c.label}
                   </div>
-                  <div className="text-[12px] font-bold text-[#201F1E] truncate leading-tight">
+                  <div className="text-[12px] font-bold text-[#201F1E] leading-tight" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                     {step.label}
                   </div>
-                  <div className="text-[10px] text-[#605E5C] truncate">
+                  <div className="text-[10px] text-[#605E5C] truncate mt-0.5">
                     {step.sub}
                   </div>
                 </div>

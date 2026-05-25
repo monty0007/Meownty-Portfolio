@@ -85,8 +85,8 @@ export const FlowEditor: React.FC<Props> = ({ value, onChange, fallbackId, fallb
   };
 
   return (
-    <div className="border-4 border-black bg-[#FFFBEA] p-4">
-      <div className="flex items-center justify-between mb-3">
+    <div className="border-4 border-black bg-[#FFFBEA] p-5">
+      <div className="flex items-center justify-between mb-4">
         <label className="font-black uppercase text-xs flex items-center gap-2">
           ⚡ Power Automate Flow Diagram
           <span className="text-[10px] font-bold text-gray-500 normal-case">
@@ -119,8 +119,8 @@ export const FlowEditor: React.FC<Props> = ({ value, onChange, fallbackId, fallb
       )}
 
       {enabled && value && (
-        <div className="space-y-3">
-          <div className="flex flex-wrap items-center gap-3 bg-white border-2 border-black p-2">
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center gap-4 bg-white border-2 border-black p-3">
             <label className="flex items-center gap-2 font-black uppercase text-[11px]">
               <input
                 type="checkbox"
@@ -136,15 +136,15 @@ export const FlowEditor: React.FC<Props> = ({ value, onChange, fallbackId, fallb
           </div>
 
           {/* Step rows */}
-          <div className="space-y-2">
+          <div className="space-y-3">
             {value.steps.map((step, idx) => (
               <div
                 key={idx}
-                className="bg-white border-2 border-black p-2"
+                className="bg-white border-2 border-black p-3"
                 style={{ borderLeftWidth: 6, borderLeftColor: STEP_TYPE_COLOR[step.type] }}
               >
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-6 h-6 bg-black text-white font-black text-[11px] flex items-center justify-center">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="min-w-[28px] h-7 px-1.5 bg-black text-white font-black text-[12px] flex items-center justify-center flex-shrink-0">
                     {idx + 1}
                   </div>
                   <div className="flex-shrink-0">
@@ -191,20 +191,20 @@ export const FlowEditor: React.FC<Props> = ({ value, onChange, fallbackId, fallb
                     >×</button>
                   </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  <input
-                    type="text"
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <textarea
+                    rows={2}
                     placeholder="Label (e.g. 'Get response details')"
                     value={step.label}
                     onChange={e => updateStep(idx, { label: e.target.value })}
-                    className="text-[12px] font-bold border-2 border-black px-2 py-1.5 w-full"
+                    className="text-[12px] font-bold border-2 border-black px-2 py-1.5 w-full resize-none leading-snug"
                   />
-                  <input
-                    type="text"
+                  <textarea
+                    rows={2}
                     placeholder="Sub-label (e.g. 'Microsoft Forms')"
                     value={step.sub}
                     onChange={e => updateStep(idx, { sub: e.target.value })}
-                    className="text-[12px] font-semibold border-2 border-black px-2 py-1.5 w-full text-gray-700"
+                    className="text-[12px] font-semibold border-2 border-black px-2 py-1.5 w-full text-gray-700 resize-none leading-snug"
                   />
                 </div>
               </div>
@@ -214,7 +214,7 @@ export const FlowEditor: React.FC<Props> = ({ value, onChange, fallbackId, fallb
           <button
             type="button"
             onClick={addStep}
-            className="w-full py-2 bg-black text-white font-black uppercase text-[11px] border-2 border-black hover:bg-gray-800"
+            className="w-full py-3 bg-black text-white font-black uppercase text-[11px] border-2 border-black hover:bg-gray-800"
           >
             + Add Step
           </button>

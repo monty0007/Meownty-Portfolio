@@ -115,7 +115,7 @@ const Hero: React.FC = () => {
 
       <div className="max-w-6xl w-full text-center z-20 relative">
         {/* Top label */}
-        <div className="flex items-center justify-center gap-3 mb-5 md:mb-7">
+        <div className="flex items-center justify-center gap-3 mb-7 md:mb-7">
           <div className={`h-px w-12 ${isDark ? 'bg-white/20' : 'bg-black/20'}`} />
           <div className="inline-block bg-[#FF4B4B] text-white px-4 md:px-6 py-2 text-sm md:text-base font-black border-4 border-[#FF4B4B] rotate-[-1deg] shadow-[4px_4px_0px_rgba(255,75,75,0.3)] cursor-default">
             Hi, I'm Manish Yadav
@@ -123,7 +123,7 @@ const Hero: React.FC = () => {
           <div className={`h-px w-12 ${isDark ? 'bg-white/20' : 'bg-black/20'}`} />
         </div>
 
-        <h1 className={`text-4xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-[7rem] font-black leading-[0.9] mb-4 md:mb-6 uppercase tracking-tighter break-words ${isDark ? 'text-white' : 'text-black'}`}>
+        <h1 className={`text-6xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-[7rem] font-black leading-[0.9] mb-6 md:mb-6 uppercase tracking-tighter break-words ${isDark ? 'text-white' : 'text-black'}`}>
           GEN AI <br className="hidden sm:block" />
           <span
             className="text-[#f0cc00] hover:scale-105 transition-transform inline-block cursor-pointer px-2"
@@ -133,13 +133,13 @@ const Hero: React.FC = () => {
           </span>
         </h1>
 
-        <p className={`max-w-2xl mx-auto text-base md:text-xl lg:text-2xl font-bold mb-6 md:mb-10 ${isDark ? 'text-white/70' : 'text-black/70'} leading-tight px-4`}>
+        <p className={`max-w-2xl mx-auto text-base md:text-xl lg:text-2xl font-bold mb-9 md:mb-10 ${isDark ? 'text-white/70' : 'text-black/70'} leading-tight px-4`}>
           Crafting production-ready AI systems with <br className="hidden md:block" />
           <span className={`px-2 inline-block my-1 ${isDark ? 'bg-[#FFD600] text-black border-2 border-[#FFD600]' : 'bg-[#FFD600] text-black border-2 border-black'}`}>Engineering Precision</span>
           {' '}and real-world impact.
         </p>
 
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 md:gap-5 px-6">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 md:gap-5 px-6 mb-2 md:mb-0">
           <a href="#projects" className="cartoon-btn bg-[#FFD600] text-black text-base md:text-xl font-black px-8 md:px-10 py-3 md:py-4 uppercase no-underline w-full sm:w-auto border-4 border-[#FFD600] shadow-[6px_6px_0px_rgba(255,214,0,0.3)] hover:shadow-[3px_3px_0px_rgba(255,214,0,0.3)] hover:translate-x-0.5 hover:translate-y-0.5 transition-all">
             View My Lab 🔬
           </a>
@@ -149,7 +149,7 @@ const Hero: React.FC = () => {
         </div>
 
         {/* Quick Stats Row */}
-        <div className="mt-10 md:mt-14 flex flex-wrap items-center justify-center gap-3">
+        <div className="mt-12 md:mt-14 flex flex-wrap items-center justify-center gap-3 gap-y-3">
           <div className={`flex items-center gap-2 px-4 py-2.5 border-2 transition-all ${isDark ? 'bg-white/5 text-white border-white/20 hover:border-[#FFD600] hover:bg-white/10' : 'bg-black/5 text-black border-black/20 hover:border-[#FFD600] hover:bg-black/10'}`}>
             <span className={`font-black text-lg leading-none ${isDark ? 'text-[#FFD600]' : 'text-black'}`}>10+</span>
             <span className="font-black uppercase text-[10px] tracking-widest">Projects Built</span>

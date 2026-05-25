@@ -433,7 +433,7 @@ const PowerPlatformModal: React.FC<{ item: PowerPlatformItem; onClose: () => voi
         {/* Close button */}
         <button
           onClick={onClose}
-          className="absolute top-3 right-3 z-30 bg-black text-white w-9 h-9 flex items-center justify-center font-black text-lg border-[3px] border-black hover:bg-[#FFD600] hover:text-black transition-colors shadow-[3px_3px_0px_#FFD600] hover:shadow-none"
+          className="absolute top-4 right-4 z-30 bg-black text-white w-10 h-10 flex items-center justify-center font-black text-xl border-[3px] border-black hover:bg-[#FFD600] hover:text-black transition-colors"
         >
           ✕
         </button>
@@ -442,10 +442,10 @@ const PowerPlatformModal: React.FC<{ item: PowerPlatformItem; onClose: () => voi
 
           {/* ── LEFT: Flow diagram or Image gallery ── */}
           {flow ? (
-            <div className="lg:col-span-2 bg-[#F3F2F1] border-b-[5px] lg:border-b-0 lg:border-r-[5px] border-black p-5 md:p-7 flex flex-col items-center lg:max-h-[88vh] lg:overflow-hidden">
-              <div className="flex items-center justify-between mb-3 w-full">
+            <div className="lg:col-span-2 bg-[#F3F2F1] border-b-[5px] lg:border-b-0 lg:border-r-[5px] border-black px-5 pb-5 md:px-7 md:pb-7 pt-16 md:pt-16 lg:pt-7 flex flex-col items-center lg:max-h-[88vh] lg:overflow-hidden">
+              <div className="flex items-center justify-between gap-2 mb-3 w-full flex-wrap lg:flex-nowrap">
                 <div
-                  className="px-4 py-1.5 font-black uppercase text-sm tracking-widest border-[3px] border-black text-white shadow-[3px_3px_0_#000]"
+                  className="px-3 py-1 lg:px-4 lg:py-1.5 font-black uppercase text-xs sm:text-sm tracking-widest border-[3px] border-black text-white shadow-[3px_3px_0_#000]"
                   style={{ backgroundColor: item.color }}
                 >
                   {item.category} · Flow

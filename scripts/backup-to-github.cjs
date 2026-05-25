@@ -13,6 +13,8 @@
 const { createClient } = require('@libsql/client');
 require('dotenv').config();
 
+const DRY_RUN = process.argv.includes('--dry-run');
+
 const TURSO_URL = process.env.VITE_TURSO_DATABASE_URL;
 const TURSO_TOKEN = process.env.VITE_TURSO_AUTH_TOKEN;
 const GH_TOKEN = process.env.BACKUP_GH_TOKEN;
@@ -26,8 +28,10 @@ function fail(msg) {
 
 if (!TURSO_URL) fail('VITE_TURSO_DATABASE_URL is missing');
 if (!TURSO_TOKEN) fail('VITE_TURSO_AUTH_TOKEN is missing');
-if (!GH_TOKEN) fail('BACKUP_GH_TOKEN is missing');
-if (!REPO || !REPO.includes('/')) fail('BACKUP_REPO must be set as "owner/repo"');
+if (!DRY_RUN) {
+  if (!GH_TOKEN) fail('BACKUP_GH_TOKEN is missing');
+  if (!REPO || !REPO.includes('/')) fail('BACKUP_REPO must be set as "owner/repo"');
+}
 
 const db = createClient({ url: TURSO_URL, authToken: TURSO_TOKEN });
 const GH_API = 'https://api.github.com';
@@ -105,11 +109,27 @@ function parseJsonField(v) {
   return v;
 }
 
+async function tableExists(name) {
+  try {
+    const res = await db.execute({
+      sql: "SELECT name FROM sqlite_master WHERE type='table' AND name = ?",
+      args: [name],
+    });
+    return res.rows.length > 0;
+  } catch {
+    return false;
+  }
+}
+
 async function fetchAll() {
-  const [posts, projects, achievements] = await Promise.all([
+  const hasPP = await tableExists('power_platform');
+  const [posts, projects, achievements, powerPlatform] = await Promise.all([
     db.execute('SELECT * FROM posts ORDER BY id ASC'),
     db.execute('SELECT * FROM projects ORDER BY sort_order ASC, id ASC'),
     db.execute('SELECT * FROM achievements ORDER BY ordering ASC, id ASC'),
+    hasPP
+      ? db.execute('SELECT * FROM power_platform ORDER BY sort_order ASC, id ASC')
+      : Promise.resolve({ rows: [] }),
   ]);
 
   const blogs = posts.rows.map((r) => ({
@@ -155,19 +175,45 @@ async function fetchAll() {
     award: r.award,
   }));
 
-  return { blogs, projectsOut, badges };
+  const powerPlatformOut = powerPlatform.rows.map((r) => {
+    // image_url historically stored as JSON array string; keep raw + parsed for safety
+    const imagesParsed = parseJsonField(r.image_url);
+    return {
+      id: Number(r.id),
+      title: r.title,
+      description: r.description,
+      category: r.category,
+      image_url: r.image_url,
+      images: Array.isArray(imagesParsed) ? imagesParsed : (r.image_url ? [r.image_url] : []),
+      color: r.color,
+      link: r.link,
+      sort_order: Number(r.sort_order || 0),
+      flow: parseJsonField(r.flow_json),
+    };
+  });
+
+  return { blogs, projectsOut, badges, powerPlatformOut };
 }
 
 (async () => {
-  console.log(`📦 Backing up to ${REPO}@${BRANCH}`);
-  const { blogs, projectsOut, badges } = await fetchAll();
-  console.log(`  • ${blogs.length} blogs, ${projectsOut.length} projects, ${badges.length} badges`);
+  if (DRY_RUN) {
+    console.log('🧪 DRY RUN — fetching from DB, no GitHub writes');
+  } else {
+    console.log(`📦 Backing up to ${REPO}@${BRANCH}`);
+  }
+  const { blogs, projectsOut, badges, powerPlatformOut } = await fetchAll();
+  console.log(`  • ${blogs.length} blogs, ${projectsOut.length} projects, ${badges.length} badges, ${powerPlatformOut.length} power-platform`);
 
   const now = new Date().toISOString();
   const stats = { written: 0, skipped: 0, failed: 0 };
 
   const writeOne = async (path, obj) => {
     const content = JSON.stringify(obj, null, 2) + '\n';
+    if (DRY_RUN) {
+      stats.written++;
+      console.log(`  + ${path} (${content.length} bytes)`);
+      return;
+    }
     try {
       const { skipped } = await putFile(path, content, `chore(backup): update ${path}`);
       if (skipped) {
@@ -196,11 +242,16 @@ async function fetchAll() {
     const name = `${a.id}-${safeFilename(a.title)}.json`;
     await writeOne(`badges/${name}`, a);
   }
+  for (const pp of powerPlatformOut) {
+    const name = `${pp.id}-${safeFilename(pp.title)}.json`;
+    await writeOne(`power-platform/${name}`, pp);
+  }
 
   // Also write consolidated snapshots for easy restore
   await writeOne('snapshots/blogs.json', blogs);
   await writeOne('snapshots/projects.json', projectsOut);
   await writeOne('snapshots/badges.json', badges);
+  await writeOne('snapshots/power-platform.json', powerPlatformOut);
 
   // Manifest
   const manifest = {
@@ -209,6 +260,7 @@ async function fetchAll() {
       blogs: blogs.length,
       projects: projectsOut.length,
       badges: badges.length,
+      power_platform: powerPlatformOut.length,
     },
     source: 'Turso (libsql)',
   };
