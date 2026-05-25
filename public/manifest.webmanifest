@@ -1,0 +1,26 @@
+{
+  "name": "Manish Yadav | GenAI Engineer Portfolio",
+  "short_name": "Manish Yadav",
+  "description": "Portfolio of Manish Yadav — GenAI Engineer building intelligent AI agents and Power Platform automations.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#FFFFFF",
+  "theme_color": "#FFD600",
+  "lang": "en",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/weew.jpg",
+      "sizes": "1200x630",
+      "type": "image/jpeg",
+      "purpose": "any"
+    }
+  ]
+}

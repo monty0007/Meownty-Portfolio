@@ -31,3 +31,12 @@ jobs:
           BACKUP_REPO: ${{ secrets.BACKUP_REPO }}
           BACKUP_BRANCH: ${{ secrets.BACKUP_BRANCH || 'main' }}
         run: node scripts/backup-to-github.cjs
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## 📦 Backup Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Repo:** ${{ secrets.BACKUP_REPO }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch:** ${{ secrets.BACKUP_BRANCH || 'main' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Sections backed up:** blogs · projects · badges · power-platform" >> $GITHUB_STEP_SUMMARY
+          echo "- **Triggered by:** ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+
+  <!-- Single-page app: all sections live on / — fragment URLs are not separate documents for Google. -->
+  <url>
+    <loc>https://manishyadav.dev/</loc>
+    <lastmod>2026-05-25</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://manishyadav.dev/weew.jpg</image:loc>
+      <image:title>Manish Yadav — GenAI Engineer Portfolio</image:title>
+      <image:caption>Portfolio preview for Manish Yadav, GenAI Engineer and Full Stack Developer.</image:caption>
+    </image:image>
+  </url>
+
+</urlset>
