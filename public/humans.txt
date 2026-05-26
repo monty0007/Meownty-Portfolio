@@ -1,0 +1,15 @@
+/* TEAM */
+Developer: Manish Yadav (Monty)
+Site: https://manishyadav.dev
+GitHub: https://github.com/monty0007
+LinkedIn: https://www.linkedin.com/in/manish-yadav-8a5667202/
+X: https://x.com/meowntyy
+Location: India
+
+/* SITE */
+Last update: 2026/05/26
+Language: English
+Doctype: HTML5
+IDE: VS Code
+Standards: HTML5, CSS3, ES2020
+Components: React, TypeScript, Tailwind CSS, Vite

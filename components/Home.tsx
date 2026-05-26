@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import SeoHead from './SeoHead';
 import Hero from './Hero';
 import Projects from './Projects';
 import Skills from './Skills';
@@ -35,6 +36,12 @@ const Home: React.FC<HomeProps> = ({ targetSection, setTargetSection }) => {
 
     return (
         <>
+            <SeoHead
+                title="Manish Yadav | Manish Yadav GenAI Engineer | Manish Yadav Portfolio"
+                description="Manish Yadav (Monty) — official portfolio of Manish Yadav, a GenAI Engineer and Full Stack Developer building LLM-powered AI agents, Power Platform automations, and React applications."
+                canonical="https://manishyadav.dev/"
+                type="website"
+            />
             <Hero />
 
             <section id="about" className={`px-6 ${isDark ? 'bg-black border-b-8 border-[#FFD600]' : 'bg-[#FFF9E6] border-b-8 border-black'} relative z-10 overflow-hidden`}>
@@ -50,7 +57,7 @@ const Home: React.FC<HomeProps> = ({ targetSection, setTargetSection }) => {
                     <div className={`w-full md:w-1/3 aspect-square overflow-hidden rotate-[-3deg] hover:rotate-0 transition-transform bg-[#FF4B4B] ${isDark ? 'border-4 border-[#FFD600] shadow-[8px_8px_0px_rgba(255,214,0,0.3)]' : 'border-4 border-black shadow-[8px_8px_0px_#000]'}`}>
                         <img
                             src="/weeww.webp"
-                            alt="Manish Yadav"
+                            alt="Manish Yadav — GenAI Engineer and Full Stack Developer"
                             width={534}
                             height={534}
                             fetchPriority="high"

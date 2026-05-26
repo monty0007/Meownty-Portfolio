@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import SeoHead from './SeoHead';
 import { createPortal } from 'react-dom';
 import { getPosts, createPost, deletePost, updatePost, invalidateBlogCache, getPostById, BlogPost } from '../services/blogService';
 import {
@@ -1167,6 +1168,12 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
 
   return (
     <div className="min-h-screen bg-[#F0F0F0]">
+      <SeoHead
+        title="Admin | Manish Yadav"
+        description="Admin area — not for public indexing."
+        canonical="https://manishyadav.dev/admin"
+        robots="noindex, nofollow"
+      />
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
       {showDeleteModal && <DeleteConfirmationModal />}
       {showWipeModal && <WipeConfirmationModal />}

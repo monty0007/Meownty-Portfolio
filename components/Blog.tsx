@@ -4,6 +4,7 @@ import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { getPosts, getPostBySlug, BlogPost } from '../services/blogService';
 import { BlogSection } from '../types';
 import { BlogCardSkeleton } from './Skeleton';
+import SeoHead from './SeoHead';
 
 const SectionRenderer: React.FC<{ section: BlogSection }> = ({ section }) => {
   switch (section.type) {
@@ -22,7 +23,7 @@ const SectionRenderer: React.FC<{ section: BlogSection }> = ({ section }) => {
       return (
         <div className="my-8">
           <div className="border-4 border-black shadow-[8px_8px_0px_#00A1FF] overflow-hidden bg-white flex justify-center">
-            <img src={section.content} alt={section.caption} className="w-full h-auto max-h-[500px] object-contain" />
+            <img src={section.content} alt={section.caption || 'Illustration in Manish Yadav blog post'} loading="lazy" decoding="async" className="w-full h-auto max-h-[500px] object-contain" />
           </div>
           {section.caption && (
             <div className="mt-3 bg-black text-white px-3 py-1.5 inline-block font-bold uppercase text-xs">
@@ -37,11 +38,11 @@ const SectionRenderer: React.FC<{ section: BlogSection }> = ({ section }) => {
         <div className="my-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="border-4 border-black shadow-[6px_6px_0px_#FFD600] overflow-hidden bg-white flex justify-center h-full">
-              <img src={section.content} alt={section.caption || 'Image 1'} className="w-full h-auto max-h-[500px] object-contain" />
+              <img src={section.content} alt={section.caption ? `${section.caption} (image 1)` : 'Illustration 1 in Manish Yadav blog post'} loading="lazy" decoding="async" className="w-full h-auto max-h-[500px] object-contain" />
             </div>
             {section.content2 && (
               <div className="border-4 border-black shadow-[6px_6px_0px_#FFD600] overflow-hidden bg-white flex justify-center h-full">
-                <img src={section.content2} alt={section.caption || 'Image 2'} className="w-full h-auto max-h-[500px] object-contain" />
+                <img src={section.content2} alt={section.caption ? `${section.caption} (image 2)` : 'Illustration 2 in Manish Yadav blog post'} loading="lazy" decoding="async" className="w-full h-auto max-h-[500px] object-contain" />
               </div>
             )}
           </div>
@@ -172,8 +173,52 @@ const Blog: React.FC = () => {
       (selectedPost.sections?.reduce((acc: number, s: any) => acc + (s.content?.split(' ')?.length || 0), 0) || 0);
     const postReadMins = Math.max(1, Math.ceil(postWordCount / 200));
 
+    // SEO: per-post title, description, canonical, and Article JSON-LD.
+    const postUrl = `https://manishyadav.dev/blog/${selectedPost.slug || slug}`;
+    const rawExcerpt = (selectedPost.excerpt || selectedPost.content || '').replace(/\s+/g, ' ').trim();
+    const postDescription = rawExcerpt.length > 0
+      ? (rawExcerpt.length > 160 ? rawExcerpt.slice(0, 157).trim() + '…' : rawExcerpt)
+      : `${selectedPost.title} — a post by Manish Yadav on the official Manish Yadav portfolio blog.`;
+    const postImage = (selectedPost as any).image || (selectedPost as any).coverImage || 'https://manishyadav.dev/weew.jpg';
+    const articleLd = {
+      '@context': 'https://schema.org',
+      '@type': 'BlogPosting',
+      '@id': `${postUrl}#article`,
+      headline: selectedPost.title,
+      description: postDescription,
+      image: postImage,
+      url: postUrl,
+      mainEntityOfPage: postUrl,
+      datePublished: selectedPost.date || undefined,
+      dateModified: selectedPost.date || undefined,
+      inLanguage: 'en-US',
+      wordCount: postWordCount,
+      timeRequired: `PT${postReadMins}M`,
+      keywords: (selectedPost.tags || []).join(', ') || undefined,
+      articleSection: (selectedPost as any).category || 'Blog',
+      author: {
+        '@type': 'Person',
+        '@id': 'https://manishyadav.dev/#person',
+        name: 'Manish Yadav',
+        url: 'https://manishyadav.dev/',
+      },
+      publisher: {
+        '@type': 'Person',
+        '@id': 'https://manishyadav.dev/#person',
+        name: 'Manish Yadav',
+      },
+    };
+
     return (
       <div className="min-h-screen bg-[#F0F0F0] animate-in slide-in-from-bottom duration-500">
+        <SeoHead
+          title={`${selectedPost.title} | Manish Yadav Blog`}
+          description={postDescription}
+          canonical={postUrl}
+          image={postImage}
+          type="article"
+          jsonLd={articleLd}
+        />
         {/* Dark header band */}
         <div className={`${isDark ? 'bg-black border-b-4 border-[#FFD600]' : 'bg-[#FFF9E6] border-b-4 border-black'} pt-36 pb-12 px-4 sm:px-6 relative overflow-hidden`}>
           <div className={`absolute -right-10 -top-8 text-[20vw] font-black ${isDark ? 'text-white/[0.03]' : 'text-black/[0.03]'} select-none pointer-events-none uppercase leading-none`}>POST</div>
@@ -281,7 +326,31 @@ const Blog: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#F0F0F0]">
-      {/* Dark Admin-style banner header */}
+      <SeoHead
+        title="Blog | Manish Yadav — GenAI Engineer Devlogs & Writing"
+        description="Read the latest devlogs and articles by Manish Yadav (Monty) — GenAI Engineer writing about AI agents, LLMs, Power Platform, React, and full-stack development."
+        canonical="https://manishyadav.dev/blog"
+        type="website"
+        jsonLd={{
+          '@context': 'https://schema.org',
+          '@type': 'Blog',
+          '@id': 'https://manishyadav.dev/blog#blog',
+          name: 'Manish Yadav Blog',
+          description: 'Devlogs and writing by Manish Yadav on GenAI, LLMs, Power Platform, and full-stack engineering.',
+          url: 'https://manishyadav.dev/blog',
+          inLanguage: 'en-US',
+          author: { '@id': 'https://manishyadav.dev/#person' },
+          publisher: { '@id': 'https://manishyadav.dev/#person' },
+          blogPost: filteredBlogs.slice(0, 20).map(b => ({
+            '@type': 'BlogPosting',
+            headline: b.title,
+            url: `https://manishyadav.dev/blog/${b.slug}`,
+            datePublished: b.date || undefined,
+            description: b.excerpt || undefined,
+            author: { '@id': 'https://manishyadav.dev/#person' },
+          })),
+        }}
+      />
       <div className={`${isDark ? 'bg-black border-b-4 border-[#FF4B4B]' : 'bg-[#FFF9E6] border-b-4 border-black'} pt-36 pb-12 px-6 relative overflow-hidden`}>
         <div className={`absolute -right-10 -top-8 text-[20vw] font-black ${isDark ? 'text-white/[0.03]' : 'text-black/[0.03]'} select-none pointer-events-none uppercase leading-none`}>LOGS</div>
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-end gap-6 relative z-10">

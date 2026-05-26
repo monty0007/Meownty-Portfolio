@@ -7,6 +7,7 @@ import { ProjectCardSkeleton } from './Skeleton';
 import { POWER_FLOWS, POWER_FLOWS_BY_TITLE } from '../data/powerFlows';
 import { PowerFlowDiagram, type PowerFlowDiagramHandle } from './PowerFlowDiagram';
 import { ServiceIcon } from './ServiceIcon';
+import SeoHead from './SeoHead';
 
 const GithubIcon = () => (
   <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor">
@@ -71,7 +72,7 @@ const ProjectModal: React.FC<{ project: Project; index: number; onClose: () => v
           {project.image ? (
             <img
               src={project.image}
-              alt={project.title}
+              alt={`${project.title} — project by Manish Yadav (GenAI Engineer)`}
               loading="lazy"
               decoding="async"
               className="w-full h-auto max-h-[55vh] object-contain mx-auto block"
@@ -654,6 +655,41 @@ const ProjectsPage: React.FC = () => {
 
   return (
     <section className="min-h-screen bg-[#FFF9E6] pb-24">
+      <SeoHead
+        title="Projects | Manish Yadav — GenAI Engineer Portfolio"
+        description="Browse Manish Yadav's projects: AI agents, LLM systems, Power Platform automations, and full-stack web apps built by Manish Yadav (Monty), GenAI Engineer."
+        canonical="https://manishyadav.dev/projects"
+        type="website"
+        jsonLd={{
+          '@context': 'https://schema.org',
+          '@type': 'CollectionPage',
+          '@id': 'https://manishyadav.dev/projects#collection',
+          name: 'Manish Yadav Projects',
+          description: "Projects by Manish Yadav: AI agents, LLM systems, Power Platform automations, and full-stack web apps.",
+          url: 'https://manishyadav.dev/projects',
+          inLanguage: 'en-US',
+          isPartOf: { '@id': 'https://manishyadav.dev/#website' },
+          about: { '@id': 'https://manishyadav.dev/#person' },
+          mainEntity: {
+            '@type': 'ItemList',
+            name: 'Manish Yadav Projects',
+            numberOfItems: projects.length,
+            itemListElement: projects.slice(0, 30).map((p, i) => ({
+              '@type': 'ListItem',
+              position: i + 1,
+              item: {
+                '@type': 'CreativeWork',
+                name: p.title,
+                description: (p as any).description || undefined,
+                url: (p as any).link && (p as any).link !== 'na' ? (p as any).link : 'https://manishyadav.dev/projects',
+                image: (p as any).image || undefined,
+                keywords: ((p as any).tags || []).join(', ') || undefined,
+                author: { '@id': 'https://manishyadav.dev/#person' },
+              },
+            })),
+          },
+        }}
+      />
       {/* Grid pattern */}
       <div
         className="fixed inset-0 pointer-events-none opacity-[0.025] z-0"

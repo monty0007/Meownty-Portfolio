@@ -124,6 +124,10 @@ const Hero: React.FC = () => {
         </div>
 
         <h1 className={`text-6xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-[7rem] font-black leading-[0.9] mb-6 md:mb-6 uppercase tracking-tighter break-words ${isDark ? 'text-white' : 'text-black'}`}>
+          {/* SEO: keep the page's primary entity ("Manish Yadav") inside the H1.
+              Visually hidden to preserve the existing design while giving search
+              engines a strong on-page signal for name + role queries. */}
+          <span className="sr-only">Manish Yadav — </span>
           GEN AI <br className="hidden sm:block" />
           <span
             className="text-[#f0cc00] hover:scale-105 transition-transform inline-block cursor-pointer px-2"
@@ -131,6 +135,7 @@ const Hero: React.FC = () => {
           >
             ENGINEER
           </span>
+          <span className="sr-only"> · Manish Yadav Portfolio</span>
         </h1>
 
         <p className={`max-w-2xl mx-auto text-base md:text-xl lg:text-2xl font-bold mb-9 md:mb-10 ${isDark ? 'text-white/70' : 'text-black/70'} leading-tight px-4`}>
