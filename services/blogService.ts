@@ -273,6 +273,9 @@ export const getPostBySlug = async (slug: string): Promise<BlogPost | null> => {
     };
 
     try {
+        const cached = fullPostCache.get(slug);
+        if (cached) return cached;
+
         const result = await db.execute({
             sql: "SELECT * FROM posts WHERE slug = ?",
             args: [slug]
@@ -281,7 +284,7 @@ export const getPostBySlug = async (slug: string): Promise<BlogPost | null> => {
         if (result.rows.length === 0) return null;
 
         const row = result.rows[0];
-        return {
+        const post: BlogPost = {
             id: Number(row.id),
             slug: String(row.slug),
             title: String(row.title),
