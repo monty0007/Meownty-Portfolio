@@ -2,7 +2,7 @@
   "rewrites": [
     { "source": "/sitemap-blog.xml", "destination": "/api/sitemap-blog.xml" },
     {
-      "source": "/((?!api/|sitemap\\.xml|sitemap-pages\\.xml|sitemap-blog\\.xml|robots\\.txt|manifest\\.webmanifest|favicon\\.svg|.*\\.(?:png|jpg|jpeg|webp|svg|ico|css|js|map|woff2?|ttf|json|txt|xml)).*)",
+      "source": "/((?!api/|sitemap\\.xml|sitemap-pages\\.xml|sitemap-blog\\.xml|robots\\.txt|manifest\\.webmanifest|favicon\\.svg|google[0-9a-f]+\\.html|.*\\.(?:png|jpg|jpeg|webp|svg|ico|css|js|map|woff2?|ttf|json|txt|xml)).*)",
       "destination": "/index.html"
     }
   ],
