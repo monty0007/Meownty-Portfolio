@@ -4,13 +4,13 @@
 
   <!-- Static routes: /, /projects, /blog -->
   <sitemap>
-    <loc>https://manishyadav.dev/sitemap-pages.xml</loc>
+    <loc>https://portfolio.maoverse.xyz/sitemap-pages.xml</loc>
     <lastmod>2026-05-26</lastmod>
   </sitemap>
 
   <!-- Dynamic blog posts, generated server-side from the database -->
   <sitemap>
-    <loc>https://manishyadav.dev/sitemap-blog.xml</loc>
+    <loc>https://portfolio.maoverse.xyz/sitemap-blog.xml</loc>
     <lastmod>2026-05-26</lastmod>
   </sitemap>
 

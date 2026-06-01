@@ -8,6 +8,7 @@ import { POWER_FLOWS, POWER_FLOWS_BY_TITLE } from '../data/powerFlows';
 import { PowerFlowDiagram, type PowerFlowDiagramHandle } from './PowerFlowDiagram';
 import { ServiceIcon } from './ServiceIcon';
 import SeoHead from './SeoHead';
+import { optimizeImage } from '../utils/cloudinary';
 
 const GithubIcon = () => (
   <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor">
@@ -71,7 +72,7 @@ const ProjectModal: React.FC<{ project: Project; index: number; onClose: () => v
 
           {project.image ? (
             <img
-              src={project.image}
+              src={optimizeImage(project.image, { width: 1400 })}
               alt={`${project.title} — project by Manish Yadav (GenAI Engineer)`}
               loading="lazy"
               decoding="async"
@@ -197,7 +198,7 @@ const ProjectCard: React.FC<{ project: Project; index: number; onClick: () => vo
 
         {project.image ? (
           <img
-            src={project.image}
+            src={optimizeImage(project.image, { width: 700 })}
             alt={project.title}
             loading="lazy"
             decoding="async"
@@ -303,7 +304,7 @@ const PowerPlatformCard: React.FC<{ item: PowerPlatformItem; onClick: () => void
       {firstImage ? (
         <div className="relative w-full aspect-video overflow-hidden border-b-[4px] border-black bg-gray-100">
           <img
-            src={firstImage}
+            src={optimizeImage(firstImage, { width: 700 })}
             alt={item.title}
             loading="lazy"
             decoding="async"
@@ -478,7 +479,7 @@ const PowerPlatformModal: React.FC<{ item: PowerPlatformItem; onClose: () => voi
               </div>
               <img
                 key={activeImg}
-                src={images[activeImg]}
+                src={optimizeImage(images[activeImg], { width: 1400 })}
                 alt={`${item.title} — screenshot ${activeImg + 1}`}
                 className="w-full h-auto max-h-[70vh] object-contain mx-auto block"
               />
@@ -658,18 +659,18 @@ const ProjectsPage: React.FC = () => {
       <SeoHead
         title="Projects | Manish Yadav — GenAI Engineer Portfolio"
         description="Browse Manish Yadav's projects: AI agents, LLM systems, Power Platform automations, and full-stack web apps built by Manish Yadav (Monty), GenAI Engineer."
-        canonical="https://manishyadav.dev/projects"
+        canonical="https://portfolio.maoverse.xyz/projects"
         type="website"
         jsonLd={{
           '@context': 'https://schema.org',
           '@type': 'CollectionPage',
-          '@id': 'https://manishyadav.dev/projects#collection',
+          '@id': 'https://portfolio.maoverse.xyz/projects#collection',
           name: 'Manish Yadav Projects',
           description: "Projects by Manish Yadav: AI agents, LLM systems, Power Platform automations, and full-stack web apps.",
-          url: 'https://manishyadav.dev/projects',
+          url: 'https://portfolio.maoverse.xyz/projects',
           inLanguage: 'en-US',
-          isPartOf: { '@id': 'https://manishyadav.dev/#website' },
-          about: { '@id': 'https://manishyadav.dev/#person' },
+          isPartOf: { '@id': 'https://portfolio.maoverse.xyz/#website' },
+          about: { '@id': 'https://portfolio.maoverse.xyz/#person' },
           mainEntity: {
             '@type': 'ItemList',
             name: 'Manish Yadav Projects',
@@ -681,10 +682,10 @@ const ProjectsPage: React.FC = () => {
                 '@type': 'CreativeWork',
                 name: p.title,
                 description: (p as any).description || undefined,
-                url: (p as any).link && (p as any).link !== 'na' ? (p as any).link : 'https://manishyadav.dev/projects',
+                url: (p as any).link && (p as any).link !== 'na' ? (p as any).link : 'https://portfolio.maoverse.xyz/projects',
                 image: (p as any).image || undefined,
                 keywords: ((p as any).tags || []).join(', ') || undefined,
-                author: { '@id': 'https://manishyadav.dev/#person' },
+                author: { '@id': 'https://portfolio.maoverse.xyz/#person' },
               },
             })),
           },

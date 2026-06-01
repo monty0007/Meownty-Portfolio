@@ -1,6 +1,6 @@
 /* TEAM */
 Developer: Manish Yadav (Monty)
-Site: https://manishyadav.dev
+Site: https://portfolio.maoverse.xyz
 GitHub: https://github.com/monty0007
 LinkedIn: https://www.linkedin.com/in/manish-yadav-8a5667202/
 X: https://x.com/meowntyy

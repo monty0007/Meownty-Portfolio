@@ -23,6 +23,7 @@ import { POWER_FLOWS, POWER_FLOWS_BY_TITLE } from '../data/powerFlows';
 import { FlowEditor } from './FlowEditor';
 import Toast from './Toast';
 import heic2any from 'heic2any';
+import { uploadToCloudinary } from '../utils/cloudinary';
 
 const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const [tab, setTab] = useState<'blogs' | 'achievements' | 'projects' | 'power-platform'>('blogs');
@@ -137,7 +138,7 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     subheading: '{\n  "type": "subheading",\n  "content": "Small section title..."\n}',
     paragraph: '{\n  "type": "paragraph",\n  "content": "Once upon a time in the 22nd century..."\n}',
     image: '{\n  "type": "image",\n  "content": "url_here",\n  "caption": "Add a caption"\n}',
-    imageGrid: '{\n  "type": "image-grid",\n  "content": "url1_here",\n  "content2": "url2_here",\n  "caption": "Add a caption for both"\n}',
+    imageGrid: '{\n  "type": "image-grid",\n  "content": "url1_here",\n  "content2": "url2_here",\n  "content3": "",\n  "content4": "",\n  "caption": "Add a caption (up to 4 images)"\n}',
     code: '{\n  "type": "code",\n  "content": "console.log(\'Action Bastion!\');",\n  "language": "javascript"\n}',
     note: '{\n  "type": "note",\n  "content": "This is a secret gadget tip!"\n}',
     link: '{\n  "type": "link",\n  "content": "https://example.com",\n  "caption": "Check out this resource"\n}'
@@ -339,12 +340,22 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       }
 
       // Resolve Image Tokens
+      const resolveToken = (value: any): any => {
+        if (typeof value === 'string' && value.startsWith('{{IMG_') && value.endsWith('}}')) {
+          const token = value.slice(2, -2);
+          if (imageMap[token]) return imageMap[token];
+        }
+        return value;
+      };
       parsedSections = parsedSections.map((section: any) => {
-        if (section.type === 'image' && section.content && section.content.startsWith('{{IMG_') && section.content.endsWith('}}')) {
-          const token = section.content.slice(2, -2);
-          if (imageMap[token]) {
-            return { ...section, content: imageMap[token] };
-          }
+        if (section.type === 'image' || section.type === 'image-grid') {
+          return {
+            ...section,
+            content: resolveToken(section.content),
+            content2: resolveToken(section.content2),
+            content3: resolveToken(section.content3),
+            content4: resolveToken(section.content4),
+          };
         }
         return section;
       });
@@ -1041,6 +1052,8 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     "type": "image-grid",
     "content": "URL1",
     "content2": "URL2",
+    "content3": "URL3 (optional)",
+    "content4": "URL4 (optional)",
     "caption": "Caption for the grid"
   },
   {
@@ -1121,7 +1134,9 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   "type": "image-grid",
   "content": "URL1",
   "content2": "URL2",
-  "caption": "Alt text"
+  "content3": "URL3 (optional)",
+  "content4": "URL4 (optional)",
+  "caption": "Up to 4 images"
 }`}</code>
               </div>
 
@@ -1171,7 +1186,7 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       <SeoHead
         title="Admin | Manish Yadav"
         description="Admin area — not for public indexing."
-        canonical="https://manishyadav.dev/admin"
+        canonical="https://portfolio.maoverse.xyz/admin"
         robots="noindex, nofollow"
       />
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
@@ -1410,7 +1425,7 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
 
                         {/* Image Uploader for Sections */}
                         <button onClick={() => smartInsert(TEMPLATES.image, true)} className="bg-[#e346d3] text-white px-2 py-1 text-[9px] font-black border-2 border-black">+URL</button>
-                        <label className="bg-[#ff8c42] text-white px-2 py-1 text-[9px] font-black border-2 border-black cursor-pointer hover:bg-orange-400">
+                        <label className="bg-[#ff8c42] text-white px-2 py-1 text-[9px] font-black border-2 border-black cursor-pointer hover:bg-orange-400" title="Upload 1, 2, 3 or 4 images (max 4) — single shows full-width, multiple form a grid">
                           +GRID
                           <input
                             type="file"
@@ -1420,32 +1435,39 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                             onChange={async (e) => {
                               const files = Array.from(e.target.files || []) as File[];
                               if (files.length === 0) return;
-                              if (files.length > 2) {
-                                showFeedback("MAX 2 IMAGES FOR GRID! 🛑", "error");
+                              if (files.length > 4) {
+                                showFeedback("MAX 4 IMAGES FOR GRID! 🛑", "error");
+                                e.target.value = '';
                                 return;
                               }
 
                               try {
+                                // Top-quality source upload (Cloudinary q_auto handles delivery sizing).
                                 const results = await Promise.all(
-                                  files.map(f => resizeImage(f))
+                                  files.map(f => resizeImage(f, 2560, 1440, 0.95))
                                 );
                                 const anyConverted = results.some(r => r.resized);
 
+                                // Offload to Cloudinary (falls back to inline base64 if unavailable).
+                                const urls = await Promise.all(
+                                  results.map(r => uploadToCloudinary(r.dataUrl, 'portfolio/blog'))
+                                );
+
                                 const ts = Date.now();
-                                const imgId1 = `IMG_${ts}_1`;
-                                const imgId2 = results.length > 1 ? `IMG_${ts}_2` : '';
+                                const ids = urls.map((_, i) => `IMG_${ts}_${i + 1}`);
 
-                                const newMap: { [key: string]: string } = { [imgId1]: results[0].dataUrl };
-                                if (imgId2) newMap[imgId2] = results[1].dataUrl;
-
+                                const newMap: { [key: string]: string } = {};
+                                ids.forEach((id, i) => { newMap[id] = urls[i]; });
                                 setImageMap(prev => ({ ...prev, ...newMap }));
 
-                                if (results.length === 1) {
-                                  smartInsert(`{\n  "type": "image",\n  "content": "{{${imgId1}}}",\n  "caption": "Uploaded Image"\n}`, true);
+                                if (urls.length === 1) {
+                                  smartInsert(`{\n  "type": "image",\n  "content": "{{${ids[0]}}}",\n  "caption": "Uploaded Image"\n}`, true);
                                 } else {
-                                  smartInsert(`{\n  "type": "image-grid",\n  "content": "{{${imgId1}}}",\n  "content2": "{{${imgId2}}}",\n  "caption": "Uploaded Grid"\n}`, true);
+                                  const fields = ['content', 'content2', 'content3', 'content4'];
+                                  const lines = ids.map((id, i) => `  "${fields[i]}": "{{${id}}}"`).join(',\n');
+                                  smartInsert(`{\n  "type": "image-grid",\n${lines},\n  "caption": "Uploaded Grid"\n}`, true);
                                 }
-                                showFeedback(anyConverted ? 'HEIC converted & uploaded! 🖼️✅' : 'Images uploaded! 🖼️✅');
+                                showFeedback(anyConverted ? 'HEIC converted & uploaded! 🖼️✅' : `${urls.length} image(s) uploaded! 🖼️✅`);
                               } catch {
                                 showFeedback('Failed to process images! 🛑', 'error');
                               }
@@ -1682,8 +1704,9 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                           const file = e.target.files?.[0];
                           if (!file) return;
                           try {
-                            const { dataUrl, resized } = await resizeImage(file);
-                            setNewProject(prev => ({ ...prev, image: dataUrl }));
+                            const { dataUrl, resized } = await resizeImage(file, 2560, 1440, 0.95);
+                            const url = await uploadToCloudinary(dataUrl, 'portfolio/projects');
+                            setNewProject(prev => ({ ...prev, image: url }));
                             showFeedback(resized ? 'HEIC converted & uploaded! 🖼️✅' : 'Image uploaded! 🖼️✅');
                           } catch {
                             showFeedback('Failed to process image! 🛑', 'error');
@@ -1882,8 +1905,9 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                           const file = e.target.files?.[0];
                           if (!file) return;
                           try {
-                            const { dataUrl } = await resizeImage(file);
-                            setNewPp(prev => ({ ...prev, images: [...prev.images, dataUrl] }));
+                            const { dataUrl } = await resizeImage(file, 2560, 1440, 0.95);
+                            const url = await uploadToCloudinary(dataUrl, 'portfolio/power');
+                            setNewPp(prev => ({ ...prev, images: [...prev.images, url] }));
                             showFeedback('Image added! 🖼️✅');
                           } catch {
                             showFeedback('Failed to process image! 🛑', 'error');

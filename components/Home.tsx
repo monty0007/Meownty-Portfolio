@@ -37,9 +37,9 @@ const Home: React.FC<HomeProps> = ({ targetSection, setTargetSection }) => {
     return (
         <>
             <SeoHead
-                title="Manish Yadav | Manish Yadav GenAI Engineer | Manish Yadav Portfolio"
+                title="Manish Yadav — GenAI Engineer | Official Portfolio of Manish Yadav (Monty)"
                 description="Manish Yadav (Monty) — official portfolio of Manish Yadav, a GenAI Engineer and Full Stack Developer building LLM-powered AI agents, Power Platform automations, and React applications."
-                canonical="https://manishyadav.dev/"
+                canonical="https://portfolio.maoverse.xyz/"
                 type="website"
             />
             <Hero />

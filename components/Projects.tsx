@@ -8,6 +8,7 @@ import {
   ProjectMobileCardSkeleton,
   ProjectDesktopCardSkeleton,
 } from './Skeleton';
+import { optimizeImage } from '../utils/cloudinary';
 
 // ────────────────────────────────────────────────────────────────────────────
 // Shared helpers
@@ -160,7 +161,7 @@ const CinematicProjectCard: React.FC<{ project: Project; index: number }> = ({ p
           <div className="absolute inset-0 bg-white border-[4px] md:border-[10px] border-black shadow-[10px_10px_0px_#000] md:shadow-[15px_15px_0px_#000] overflow-hidden lg:group-hover/img:shadow-[5px_5px_0px_#000] transition-all">
             {project.image ? (
               <img
-                src={project.image}
+                src={optimizeImage(project.image, { width: 1200 })}
                 alt={project.title}
                 loading="lazy"
                 decoding="async"
@@ -279,7 +280,7 @@ const CinematicProjects: React.FC<{ projects: Project[]; loading: boolean }> = (
                     SCHEMA_DATA_{index + 1}
                   </div>
                   {project.image ? (
-                    <img src={project.image} alt={project.title} loading="lazy" decoding="async" className="w-full aspect-[16/10] object-cover border-b-4 border-black" />
+                    <img src={optimizeImage(project.image, { width: 800 })} alt={project.title} loading="lazy" decoding="async" className="w-full aspect-[16/10] object-cover border-b-4 border-black" />
                   ) : (
                     <div className="w-full aspect-[16/10] flex items-center justify-center font-black text-5xl text-black/20 border-b-4 border-black" style={{ backgroundColor: project.color + '22' }}>
                       {getProjectInitials(project.title) || '?'}
@@ -402,7 +403,7 @@ const CinematicProjects: React.FC<{ projects: Project[]; loading: boolean }> = (
 // ════════════════════════════════════════════════════════════════════════════
 const ProjectImage: React.FC<{ project: Project; className?: string }> = ({ project, className = '' }) => {
   if (project.image) {
-    return <img src={project.image} alt={project.title} loading="lazy" decoding="async" className={`w-full h-full object-cover ${className}`} />;
+    return <img src={optimizeImage(project.image, { width: 800 })} alt={project.title} loading="lazy" decoding="async" className={`w-full h-full object-cover ${className}`} />;
   }
   return (
     <div className={`w-full h-full flex items-center justify-center font-black text-5xl text-black/20 ${className}`} style={{ backgroundColor: `${project.color}24` }} aria-label={project.title}>

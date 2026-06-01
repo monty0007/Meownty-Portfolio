@@ -8,7 +8,7 @@ type VercelResponse = {
     send: (body: string) => void;
 };
 
-const SITE = 'https://manishyadav.dev';
+const SITE = 'https://portfolio.maoverse.xyz';
 
 const escapeXml = (s: string) =>
     s.replace(/&/g, '&amp;')

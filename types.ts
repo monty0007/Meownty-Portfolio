@@ -3,6 +3,8 @@ export interface BlogSection {
   type: 'heading' | 'subheading' | 'paragraph' | 'markdown' | 'image' | 'image-grid' | 'code' | 'note' | 'text' | 'link';
   content: string;
   content2?: string;
+  content3?: string;
+  content4?: string;
   caption?: string;
   language?: string;
 }

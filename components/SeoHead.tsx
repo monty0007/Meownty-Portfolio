@@ -19,7 +19,7 @@ interface SeoHeadProps {
   robots?: string;
 }
 
-const DEFAULT_IMAGE = 'https://manishyadav.dev/weew.jpg';
+const DEFAULT_IMAGE = 'https://portfolio.maoverse.xyz/weew.jpg';
 const ROUTE_LD_ID = 'seo-route-jsonld';
 
 function setMeta(selector: string, attr: 'content' | 'href', value: string) {

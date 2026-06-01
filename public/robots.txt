@@ -35,4 +35,4 @@ Allow: /
 User-agent: Google-Extended
 Allow: /
 
-Sitemap: https://manishyadav.dev/sitemap.xml
+Sitemap: https://portfolio.maoverse.xyz/sitemap.xml

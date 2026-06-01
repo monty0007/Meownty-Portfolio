@@ -5,6 +5,7 @@ import { getPosts, getPostBySlug, BlogPost } from '../services/blogService';
 import { BlogSection } from '../types';
 import { BlogCardSkeleton } from './Skeleton';
 import SeoHead from './SeoHead';
+import { optimizeImage } from '../utils/cloudinary';
 
 const SectionRenderer: React.FC<{ section: BlogSection }> = ({ section }) => {
   switch (section.type) {
@@ -23,7 +24,7 @@ const SectionRenderer: React.FC<{ section: BlogSection }> = ({ section }) => {
       return (
         <div className="my-8">
           <div className="border-4 border-black shadow-[8px_8px_0px_#00A1FF] overflow-hidden bg-white flex justify-center">
-            <img src={section.content} alt={section.caption || 'Illustration in Manish Yadav blog post'} loading="lazy" decoding="async" className="w-full h-auto max-h-[500px] object-contain" />
+            <img src={optimizeImage(section.content, { width: 1000 })} alt={section.caption || 'Illustration in Manish Yadav blog post'} loading="lazy" decoding="async" className="w-full h-auto max-h-[500px] object-contain" />
           </div>
           {section.caption && (
             <div className="mt-3 bg-black text-white px-3 py-1.5 inline-block font-bold uppercase text-xs">
@@ -33,18 +34,31 @@ const SectionRenderer: React.FC<{ section: BlogSection }> = ({ section }) => {
         </div>
       );
 
-    case 'image-grid':
+    case 'image-grid': {
+      const gridImages = [section.content, section.content2, section.content3, section.content4].filter(Boolean) as string[];
+      const colClass = gridImages.length >= 4
+        ? 'grid-cols-1 sm:grid-cols-2'
+        : gridImages.length === 3
+          ? 'grid-cols-1 sm:grid-cols-3'
+          : gridImages.length === 2
+            ? 'grid-cols-1 md:grid-cols-2'
+            : 'grid-cols-1';
+      // For a single image, fall back to the larger optimized width.
+      const imgWidth = gridImages.length === 1 ? 1000 : 700;
       return (
         <div className="my-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="border-4 border-black shadow-[6px_6px_0px_#FFD600] overflow-hidden bg-white flex justify-center h-full">
-              <img src={section.content} alt={section.caption ? `${section.caption} (image 1)` : 'Illustration 1 in Manish Yadav blog post'} loading="lazy" decoding="async" className="w-full h-auto max-h-[500px] object-contain" />
-            </div>
-            {section.content2 && (
-              <div className="border-4 border-black shadow-[6px_6px_0px_#FFD600] overflow-hidden bg-white flex justify-center h-full">
-                <img src={section.content2} alt={section.caption ? `${section.caption} (image 2)` : 'Illustration 2 in Manish Yadav blog post'} loading="lazy" decoding="async" className="w-full h-auto max-h-[500px] object-contain" />
+          <div className={`grid ${colClass} gap-4`}>
+            {gridImages.map((src, i) => (
+              <div key={i} className="border-4 border-black shadow-[6px_6px_0px_#FFD600] overflow-hidden bg-white flex justify-center h-full">
+                <img
+                  src={optimizeImage(src, { width: imgWidth })}
+                  alt={section.caption ? `${section.caption} (image ${i + 1})` : `Illustration ${i + 1} in Manish Yadav blog post`}
+                  loading="lazy"
+                  decoding="async"
+                  className="w-full h-auto max-h-[500px] object-contain"
+                />
               </div>
-            )}
+            ))}
           </div>
           {section.caption && (
             <div className="mt-4 bg-black text-white px-3 py-1.5 inline-block font-bold uppercase text-xs">
@@ -53,6 +67,7 @@ const SectionRenderer: React.FC<{ section: BlogSection }> = ({ section }) => {
           )}
         </div>
       );
+    }
 
     case 'code':
       return (
@@ -174,12 +189,12 @@ const Blog: React.FC = () => {
     const postReadMins = Math.max(1, Math.ceil(postWordCount / 200));
 
     // SEO: per-post title, description, canonical, and Article JSON-LD.
-    const postUrl = `https://manishyadav.dev/blog/${selectedPost.slug || slug}`;
+    const postUrl = `https://portfolio.maoverse.xyz/blog/${selectedPost.slug || slug}`;
     const rawExcerpt = (selectedPost.excerpt || selectedPost.content || '').replace(/\s+/g, ' ').trim();
     const postDescription = rawExcerpt.length > 0
       ? (rawExcerpt.length > 160 ? rawExcerpt.slice(0, 157).trim() + '…' : rawExcerpt)
       : `${selectedPost.title} — a post by Manish Yadav on the official Manish Yadav portfolio blog.`;
-    const postImage = (selectedPost as any).image || (selectedPost as any).coverImage || 'https://manishyadav.dev/weew.jpg';
+    const postImage = (selectedPost as any).image || (selectedPost as any).coverImage || 'https://portfolio.maoverse.xyz/weew.jpg';
     const articleLd = {
       '@context': 'https://schema.org',
       '@type': 'BlogPosting',
@@ -198,13 +213,13 @@ const Blog: React.FC = () => {
       articleSection: (selectedPost as any).category || 'Blog',
       author: {
         '@type': 'Person',
-        '@id': 'https://manishyadav.dev/#person',
+        '@id': 'https://portfolio.maoverse.xyz/#person',
         name: 'Manish Yadav',
-        url: 'https://manishyadav.dev/',
+        url: 'https://portfolio.maoverse.xyz/',
       },
       publisher: {
         '@type': 'Person',
-        '@id': 'https://manishyadav.dev/#person',
+        '@id': 'https://portfolio.maoverse.xyz/#person',
         name: 'Manish Yadav',
       },
     };
@@ -329,25 +344,25 @@ const Blog: React.FC = () => {
       <SeoHead
         title="Blog | Manish Yadav — GenAI Engineer Devlogs & Writing"
         description="Read the latest devlogs and articles by Manish Yadav (Monty) — GenAI Engineer writing about AI agents, LLMs, Power Platform, React, and full-stack development."
-        canonical="https://manishyadav.dev/blog"
+        canonical="https://portfolio.maoverse.xyz/blog"
         type="website"
         jsonLd={{
           '@context': 'https://schema.org',
           '@type': 'Blog',
-          '@id': 'https://manishyadav.dev/blog#blog',
+          '@id': 'https://portfolio.maoverse.xyz/blog#blog',
           name: 'Manish Yadav Blog',
           description: 'Devlogs and writing by Manish Yadav on GenAI, LLMs, Power Platform, and full-stack engineering.',
-          url: 'https://manishyadav.dev/blog',
+          url: 'https://portfolio.maoverse.xyz/blog',
           inLanguage: 'en-US',
-          author: { '@id': 'https://manishyadav.dev/#person' },
-          publisher: { '@id': 'https://manishyadav.dev/#person' },
+          author: { '@id': 'https://portfolio.maoverse.xyz/#person' },
+          publisher: { '@id': 'https://portfolio.maoverse.xyz/#person' },
           blogPost: filteredBlogs.slice(0, 20).map(b => ({
             '@type': 'BlogPosting',
             headline: b.title,
-            url: `https://manishyadav.dev/blog/${b.slug}`,
+            url: `https://portfolio.maoverse.xyz/blog/${b.slug}`,
             datePublished: b.date || undefined,
             description: b.excerpt || undefined,
-            author: { '@id': 'https://manishyadav.dev/#person' },
+            author: { '@id': 'https://portfolio.maoverse.xyz/#person' },
           })),
         }}
       />
