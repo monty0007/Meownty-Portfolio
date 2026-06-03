@@ -296,7 +296,7 @@ const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
           </div>
 
           <div className="flex flex-col items-center text-center">
-            <div className="text-xl font-black uppercase tracking-tight">© {new Date().getFullYear()} MEOWNTY😸</div>
+            <div className="text-xl font-black uppercase tracking-tight">© {new Date().getFullYear()} MEOWNTYY😸</div>
             <div className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-600 mt-1">Built with high-frequency energy</div>
           </div>
 
