@@ -1186,7 +1186,7 @@ const Admin: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       <SeoHead
         title="Admin | Manish Yadav"
         description="Admin area — not for public indexing."
-        canonical="https://portfolio.maoverse.xyz/admin"
+        canonical="https://portfolio.meownty365.me/admin"
         robots="noindex, nofollow"
       />
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}

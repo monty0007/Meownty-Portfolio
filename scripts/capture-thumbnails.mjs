@@ -6,10 +6,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(__dirname, '..', 'public');
 
 const sites = [
-  { url: 'https://oryn.maoverse.xyz/', filename: 'oryn.png' },
-  { url: 'https://docreaper.maoverse.xyz/', filename: 'docreaper.png' },
+  { url: 'https://oryn.meownty365.me/', filename: 'oryn.png' },
+  { url: 'https://docreaper.meownty365.me/', filename: 'docreaper.png' },
   { url: 'https://super-mario-kart-902002915057.asia-south1.run.app/', filename: 'mariokart.png' },
-  { url: 'http://calcai.maoverse.xyz/', filename: 'azurecalc.png' },
+  { url: 'http://calcai.meownty365.me/', filename: 'azurecalc.png' },
 ];
 
 const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] });

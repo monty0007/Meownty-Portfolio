@@ -189,12 +189,12 @@ const Blog: React.FC = () => {
     const postReadMins = Math.max(1, Math.ceil(postWordCount / 200));
 
     // SEO: per-post title, description, canonical, and Article JSON-LD.
-    const postUrl = `https://portfolio.maoverse.xyz/blog/${selectedPost.slug || slug}`;
+    const postUrl = `https://portfolio.meownty365.me/blog/${selectedPost.slug || slug}`;
     const rawExcerpt = (selectedPost.excerpt || selectedPost.content || '').replace(/\s+/g, ' ').trim();
     const postDescription = rawExcerpt.length > 0
       ? (rawExcerpt.length > 160 ? rawExcerpt.slice(0, 157).trim() + '…' : rawExcerpt)
       : `${selectedPost.title} — a post by Manish Yadav on the official Manish Yadav portfolio blog.`;
-    const postImage = (selectedPost as any).image || (selectedPost as any).coverImage || 'https://portfolio.maoverse.xyz/weew.jpg';
+    const postImage = (selectedPost as any).image || (selectedPost as any).coverImage || 'https://portfolio.meownty365.me/weew.jpg';
     const articleLd = {
       '@context': 'https://schema.org',
       '@type': 'BlogPosting',
@@ -213,13 +213,13 @@ const Blog: React.FC = () => {
       articleSection: (selectedPost as any).category || 'Blog',
       author: {
         '@type': 'Person',
-        '@id': 'https://portfolio.maoverse.xyz/#person',
+        '@id': 'https://portfolio.meownty365.me/#person',
         name: 'Manish Yadav',
-        url: 'https://portfolio.maoverse.xyz/',
+        url: 'https://portfolio.meownty365.me/',
       },
       publisher: {
         '@type': 'Person',
-        '@id': 'https://portfolio.maoverse.xyz/#person',
+        '@id': 'https://portfolio.meownty365.me/#person',
         name: 'Manish Yadav',
       },
     };
@@ -344,25 +344,25 @@ const Blog: React.FC = () => {
       <SeoHead
         title="Blog | Manish Yadav — GenAI Engineer Devlogs & Writing"
         description="Read the latest devlogs and articles by Manish Yadav (Monty) — GenAI Engineer writing about AI agents, LLMs, Power Platform, React, and full-stack development."
-        canonical="https://portfolio.maoverse.xyz/blog"
+        canonical="https://portfolio.meownty365.me/blog"
         type="website"
         jsonLd={{
           '@context': 'https://schema.org',
           '@type': 'Blog',
-          '@id': 'https://portfolio.maoverse.xyz/blog#blog',
+          '@id': 'https://portfolio.meownty365.me/blog#blog',
           name: 'Manish Yadav Blog',
           description: 'Devlogs and writing by Manish Yadav on GenAI, LLMs, Power Platform, and full-stack engineering.',
-          url: 'https://portfolio.maoverse.xyz/blog',
+          url: 'https://portfolio.meownty365.me/blog',
           inLanguage: 'en-US',
-          author: { '@id': 'https://portfolio.maoverse.xyz/#person' },
-          publisher: { '@id': 'https://portfolio.maoverse.xyz/#person' },
+          author: { '@id': 'https://portfolio.meownty365.me/#person' },
+          publisher: { '@id': 'https://portfolio.meownty365.me/#person' },
           blogPost: filteredBlogs.slice(0, 20).map(b => ({
             '@type': 'BlogPosting',
             headline: b.title,
-            url: `https://portfolio.maoverse.xyz/blog/${b.slug}`,
+            url: `https://portfolio.meownty365.me/blog/${b.slug}`,
             datePublished: b.date || undefined,
             description: b.excerpt || undefined,
-            author: { '@id': 'https://portfolio.maoverse.xyz/#person' },
+            author: { '@id': 'https://portfolio.meownty365.me/#person' },
           })),
         }}
       />

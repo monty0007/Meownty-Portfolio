@@ -10,7 +10,7 @@ export const PROJECTS: Project[] = [
     image: '/triviarena.png',
     tags: ['React', 'Firebase', 'MongoDB', 'TailwindCSS'],
     color: '#00A1FF',
-    link: 'https://triviarena.maoverse.xyz/',
+    link: 'https://triviarena.meownty365.me/',
     disabled: false
   },
   {
@@ -40,7 +40,7 @@ export const PROJECTS: Project[] = [
     image: '/oryn.png',
     tags: ['AI', 'Prompt Engineering', 'Image Generation', 'React'],
     color: '#FF6B35',
-    link: 'https://oryn.maoverse.xyz/',
+    link: 'https://oryn.meownty365.me/',
     disabled: false
   },
   {
@@ -50,7 +50,7 @@ export const PROJECTS: Project[] = [
     image: '/docreaper.png',
     tags: ['Node.js', 'HTML to PDF', 'Web Tool'],
     color: '#E91E63',
-    link: 'https://docreaper.maoverse.xyz/',
+    link: 'https://docreaper.meownty365.me/',
     disabled: false
   },
   {
@@ -90,7 +90,7 @@ export const PROJECTS: Project[] = [
     image: '/azurecalc.png',
     tags: ['React', 'Azure', 'AI', 'BOQ', 'VM Comparison'],
     color: '#0078D4',
-    link: 'http://calcai.maoverse.xyz/',
+    link: 'http://calcai.meownty365.me/',
     disabled: false
   },
   {

@@ -659,18 +659,18 @@ const ProjectsPage: React.FC = () => {
       <SeoHead
         title="Projects | Manish Yadav — GenAI Engineer Portfolio"
         description="Browse Manish Yadav's projects: AI agents, LLM systems, Power Platform automations, and full-stack web apps built by Manish Yadav (Monty), GenAI Engineer."
-        canonical="https://portfolio.maoverse.xyz/projects"
+        canonical="https://portfolio.meownty365.me/projects"
         type="website"
         jsonLd={{
           '@context': 'https://schema.org',
           '@type': 'CollectionPage',
-          '@id': 'https://portfolio.maoverse.xyz/projects#collection',
+          '@id': 'https://portfolio.meownty365.me/projects#collection',
           name: 'Manish Yadav Projects',
           description: "Projects by Manish Yadav: AI agents, LLM systems, Power Platform automations, and full-stack web apps.",
-          url: 'https://portfolio.maoverse.xyz/projects',
+          url: 'https://portfolio.meownty365.me/projects',
           inLanguage: 'en-US',
-          isPartOf: { '@id': 'https://portfolio.maoverse.xyz/#website' },
-          about: { '@id': 'https://portfolio.maoverse.xyz/#person' },
+          isPartOf: { '@id': 'https://portfolio.meownty365.me/#website' },
+          about: { '@id': 'https://portfolio.meownty365.me/#person' },
           mainEntity: {
             '@type': 'ItemList',
             name: 'Manish Yadav Projects',
@@ -682,10 +682,10 @@ const ProjectsPage: React.FC = () => {
                 '@type': 'CreativeWork',
                 name: p.title,
                 description: (p as any).description || undefined,
-                url: (p as any).link && (p as any).link !== 'na' ? (p as any).link : 'https://portfolio.maoverse.xyz/projects',
+                url: (p as any).link && (p as any).link !== 'na' ? (p as any).link : 'https://portfolio.meownty365.me/projects',
                 image: (p as any).image || undefined,
                 keywords: ((p as any).tags || []).join(', ') || undefined,
-                author: { '@id': 'https://portfolio.maoverse.xyz/#person' },
+                author: { '@id': 'https://portfolio.meownty365.me/#person' },
               },
             })),
           },
